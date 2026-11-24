@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Briefing Diário de Notícias: inteligência de mercado para os setores florestal e siderúrgico.">
+  <meta name="theme-color" content="#102b27">
+  <title>Briefing Diário | Inteligência de Mercado</title>
+  <style>
+    :root{color-scheme:light;--pine:#102b27;--pine2:#1d5146;--mint:#daeae0;--cream:#f7f7f1;--ink:#142821;--muted:#607168;--line:#dce4dc;--white:#fff;--gold:#c5a36a}
+    *{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:var(--cream);color:var(--ink);font:16px/1.6 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+    a{color:inherit;text-decoration:none}a:focus-visible,button:focus-visible{outline:3px solid #a5cbb5;outline-offset:3px}
+    .wrap{max-width:1136px;margin:auto;padding:0 26px}.masthead{background:var(--pine);color:white;position:relative;overflow:hidden}
+    .masthead:after{content:"";position:absolute;width:530px;height:530px;border:1px solid #ffffff19;border-radius:50%;right:-200px;top:-210px;box-shadow:0 0 0 75px #ffffff08,0 0 0 150px #ffffff06;pointer-events:none}
+    .nav{display:flex;align-items:center;justify-content:space-between;gap:20px;min-height:82px;border-bottom:1px solid #ffffff26;position:relative;z-index:1}
+    .brand{display:flex;gap:12px;align-items:center;font-size:13px;font-weight:800;letter-spacing:.12em;text-transform:uppercase}
+    .logo{width:38px;height:38px;background:#e4efe6;border-radius:11px;display:grid;place-items:center;color:var(--pine);font-weight:900;font-size:17px;letter-spacing:-.1em}
+    nav{display:flex;gap:25px;font-size:14px;color:#dbe9e2}nav a:hover{color:white;text-decoration:underline}
+    .hero{padding:90px 0 97px;max-width:850px;position:relative;z-index:1}.eyebrow{font-size:12px;font-weight:800;letter-spacing:.17em;color:#c0d9c9;text-transform:uppercase}
+    h1{font-size:clamp(2.4rem,6.7vw,5rem);letter-spacing:-.058em;line-height:1.07;font-weight:760;margin:16px 0 24px}h1 em{font-style:normal;color:#c4d9c8}
+    .lead{font-size:clamp(1rem,2.3vw,1.25rem);max-width:660px;color:#e0e9e4;line-height:1.75;margin:0}
+    main{padding:48px 0 80px}.panel{background:white;border:1px solid var(--line);border-radius:20px;box-shadow:0 9px 30px #102b2709;overflow:hidden}
+    .panel-top{padding:29px 32px 16px;display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap}
+    .section-label{color:var(--pine2);text-transform:uppercase;letter-spacing:.14em;font-size:11px;font-weight:850}
+    h2{font-size:clamp(1.45rem,3vw,2rem);letter-spacing:-.04em;line-height:1.2;margin:10px 0}
+    .sub{color:var(--muted);margin:0;font-size:14px}.pill{border:1px solid #b3d4c1;background:#edf6ef;color:#245744;font-size:12px;font-weight:700;border-radius:999px;padding:6px 13px}
+    .featured{padding:22px 32px 33px}.empty{padding:44px 24px;text-align:center;border:1px dashed #cedbd2;border-radius:14px;background:#fafcf9}
+    .empty .symbol{font-size:35px;display:block;margin-bottom:8px}.empty strong{font-size:19px}.empty p{max-width:460px;color:var(--muted);margin:8px auto 0}
+    .feature{display:none;background:linear-gradient(120deg,#eff5ed,#f8faf6);border:1px solid #d7e5d8;border-radius:15px;padding:28px;gap:15px}
+    .feature.active{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap}
+    .feature h3{margin:8px 0 5px;font-size:25px;letter-spacing:-.04em}.button{display:inline-flex;align-items:center;justify-content:center;background:var(--pine);color:white!important;padding:13px 20px;border-radius:9px;font-size:14px;font-weight:750;white-space:nowrap}
+    .button:hover{background:#205244}.cols{display:grid;grid-template-columns:1.55fr 1fr;gap:24px;margin-top:24px}.archive,.about{padding:28px 30px}
+    .archive ul{list-style:none;margin:20px 0 0;padding:0}.archive li{border-top:1px solid var(--line);padding:15px 0;display:flex;align-items:center;justify-content:space-between;gap:16px}
+    .archive li a{font-weight:700;color:var(--pine2)}.archive li a:hover{text-decoration:underline}.hint{font-size:14px;color:var(--muted);margin-top:16px}
+    .about p{color:#52665b;margin:12px 0 16px;font-size:14px}.chips{display:flex;flex-wrap:wrap;gap:7px}.chips span{background:#eef3ed;border:1px solid #dde7db;font-size:12px;padding:5px 9px;border-radius:6px}
+    .footer{border-top:1px solid var(--line);padding:28px 0 40px;color:var(--muted);font-size:13px}.footer .wrap{display:flex;justify-content:space-between;flex-wrap:wrap;gap:12px}
+    @media(max-width:760px){.hero{padding:65px 0 74px}.nav{min-height:72px}.cols{grid-template-columns:1fr}.panel-top,.featured{padding-left:21px;padding-right:21px}.archive,.about{padding:23px}.feature{padding:20px}.feature.active{align-items:flex-start}}
+    @media(max-width:420px){.wrap{padding:0 16px}.brand span{font-size:11px}nav{gap:12px}nav a{font-size:12px}}
+  </style>
+</head>
+<body>
+<header class="masthead">
+  <div class="wrap">
+    <div class="nav"><a class="brand" href="./" aria-label="Página inicial"><span class="logo">B.</span><span>Briefing Diário</span></a><nav aria-label="Navegação"><a href="#ultima">Última edição</a><a href="#arquivo">Arquivo</a></nav></div>
+    <div class="hero"><div class="eyebrow">Inteligência de mercado · Brasil e mundo</div><h1>Informação que vira<br><em>decisão.</em></h1><p class="lead">O essencial de política, economia, mercados, inteligência artificial, inovação florestal e siderurgia — com fontes verificáveis e impacto para o planejamento.</p></div>
+  </div>
+</header>
+<main class="wrap">
+  <section class="panel" id="ultima" aria-labelledby="titulo-ultima">
+    <div class="panel-top"><div><div class="section-label">Edição em destaque</div><h2 id="titulo-ultima">O briefing mais recente</h2><p class="sub">Publicações de segunda a sexta-feira, às 08h (Brasília).</p></div><span class="pill" id="estado">Consultando arquivo…</span></div>
+    <div class="featured">
+      <div class="empty" id="vazio" role="status"><span class="symbol" aria-hidden="true">◷</span><strong>Ainda não há edições publicadas.</strong><p>A primeira edição ficará disponível aqui depois da geração, validação das fontes e publicação.</p></div>
+      <div class="feature" id="destaque"><div><div class="section-label">Leia a edição completa</div><h3 id="data-ultima"></h3><p class="sub">Análise executiva · 20 a 30 minutos · links para fontes originais</p></div><a class="button" id="link-ultima" href="#">Abrir briefing ↗</a></div>
+    </div>
+  </section>
+  <div class="cols">
+    <section class="panel archive" id="arquivo" aria-labelledby="titulo-arquivo"><div class="section-label">Biblioteca</div><h2 id="titulo-arquivo">Histórico de edições</h2><p class="sub">Acesse briefings publicados em datas anteriores.</p><ul id="lista-arquivo"></ul><p id="arquivo-vazio" class="hint">As edições aparecerão aqui assim que forem publicadas.</p></section>
+    <aside class="panel about" aria-labelledby="titulo-areas"><div class="section-label">Cobertura</div><h2 id="titulo-areas">O que acompanhamos</h2><p>Conteúdo selecionado pela relevância para os custos, preços, crédito, clima e decisões de uma operação florestal e siderúrgica.</p><div class="chips"><span>Política</span><span>Economia</span><span>Mercado financeiro</span><span>Inteligência artificial</span><span>Inovação florestal</span><span>Mercado do aço</span><span>Setor florestal</span></div><p>Matérias sem verificação independente são sinalizadas; informações não confirmadas não devem ser tratadas como fatos.</p></aside>
+  </div>
+</main>
+<footer class="footer"><div class="wrap"><span>Briefing Diário de Notícias · Inteligência de mercado</span><span>Conteúdo informativo · Consulte sempre as fontes originais</span></div></footer>
+<script>
+(function(){
+  "use strict";
+  var latest=document.getElementById("destaque"), empty=document.getElementById("vazio"), status=document.getElementById("estado"), archive=document.getElementById("lista-arquivo"), noArchive=document.getElementById("arquivo-vazio");
+  function validDate(s){return typeof s==="string" && /^\d{4}-\d{2}-\d{2}$/.test(s) && !Number.isNaN(Date.parse(s+"T12:00:00Z"))}
+  function readable(s){return new Intl.DateTimeFormat("pt-BR",{day:"2-digit",month:"long",year:"numeric",timeZone:"UTC"}).format(new Date(s+"T12:00:00Z"))}
+  function path(s){return "edicoes/"+s+".html"}
+  fetch("edicoes/manifest.json",{cache:"no-store"}).then(function(r){if(!r.ok)throw Error("Manifesto indisponível");return r.json()}).then(function(data){
+    var entries=Array.isArray(data.editions)?data.editions.filter(function(x){return x && validDate(x.date)}):[];
+    entries.sort(function(a,b){return b.date.localeCompare(a.date)});
+    entries=entries.filter(function(x,i){return entries.findIndex(function(y){return y.date===x.date})===i});
+    status.textContent=entries.length?entries.length+" edição(ões)":"Aguardando primeira edição";
+    if(!entries.length)return;
+    empty.hidden=true;latest.classList.add("active");
+    document.getElementById("data-ultima").textContent=readable(entries[0].date);
+    document.getElementById("link-ultima").href=path(entries[0].date);
+    noArchive.hidden=true;
+    entries.forEach(function(entry){
+      var li=document.createElement("li"),link=document.createElement("a"),small=document.createElement("span");
+      link.href=path(entry.date);link.textContent="Briefing · "+readable(entry.date);
+      small.textContent="Abrir ↗";small.className="sub";li.append(link,small);archive.append(li);
+    });
+  }).catch(function(){status.textContent="Arquivo indisponível";document.querySelector("#vazio p").textContent="Não foi possível consultar o arquivo agora. Tente recarregar esta página."});
+})();
+</script>
+</body>
+</html>
