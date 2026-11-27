@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 import shutil
 from datetime import date, time
 from pathlib import Path
@@ -263,6 +264,30 @@ class TestGrupoFConfiguracao:
 
 
 # ============================================================ Grupo H
+# Credenciais FICTICIAS usadas nos testes de redacao (nao sao credenciais reais).
+USUARIO_FICTICIO = "admin"
+SEGREDO_FICTICIO = "TOKEN123"
+URL_COM_CREDENCIAIS = f"https://{USUARIO_FICTICIO}:{SEGREDO_FICTICIO}@www.reuters.com/"
+URL_REDIGIDA = "https://***@www.reuters.com/"
+URL_REDIGIDA_CITADA = f"'{URL_REDIGIDA}'"
+_CAMINHO_WIN = r"C:\Users\runneradmin\AppData\Local\Temp\pytest-0\config\fontes.yaml"
+# Qualquer "esquema://<userinfo>@" cujo userinfo nao seja exatamente "***".
+_USERINFO_NAO_REDIGIDO = re.compile(r"://(?!\*\*\*@)[^/\s'\"@]+@")
+
+
+def _assert_sem_vazamento(texto: str) -> None:
+    """Falha se o texto expuser a credencial ficticia (token ou usuario na URL).
+
+    A palavra "admin" isolada (ex.: em ``runneradmin`` no caminho do arquivo)
+    NAO e vazamento; so o e no contexto de autenticacao da URL.
+    """
+    assert SEGREDO_FICTICIO not in texto, "token nao redigido"
+    assert f"{USUARIO_FICTICIO}:{SEGREDO_FICTICIO}" not in texto, "credencial original exposta"
+    assert f"{USUARIO_FICTICIO}:" not in texto, "fragmento de autenticacao 'usuario:' exposto"
+    assert f"://{USUARIO_FICTICIO}@" not in texto, "usuario nao redigido na URL"
+    assert not _USERINFO_NAO_REDIGIDO.search(texto), "userinfo nao redigido na URL"
+
+
 class TestGrupoHSeguranca:
     def test_tag_python_rejeitada(self, tmp_path):
         p = tmp_path / "x.yaml"
@@ -317,11 +342,72 @@ class TestGrupoHSeguranca:
         assert "SENHA_SECRETA" not in str(exc.value) and "usuario" not in str(exc.value)
         assert "***@exemplo.com.br" in str(exc.value)
 
-    def test_credenciais_na_config_nao_vazam(self, cfg_dir):
-        _substituir(cfg_dir / "fontes.yaml", '"https://www.reuters.com/"', '"https://admin:TOKEN123@www.reuters.com/"')
+    @pytest.mark.parametrize(
+        "pasta",
+        [
+            "comum",  # caminho temporario comum
+            "runneradmin",  # usuario do runner Windows (C:\\Users\\runneradmin\\...)
+            "admin_pasta",  # "admin" no caminho, fora do contexto de autenticacao
+        ],
+    )
+    def test_credenciais_na_config_nao_vazam(self, tmp_path, pasta):
+        cfg_dir = tmp_path / pasta / "config"
+        shutil.copytree(CONFIG, cfg_dir)
+        _substituir(cfg_dir / "fontes.yaml", '"https://www.reuters.com/"', f'"{URL_COM_CREDENCIAIS}"')
         with pytest.raises(ErroConfiguracao) as exc:
             carregar_configuracao(cfg_dir)
-        assert "TOKEN123" not in str(exc.value) and "admin" not in str(exc.value)
+        erro = exc.value
+        # Nem o motivo nem a mensagem completa (que inclui o caminho do arquivo) vazam.
+        _assert_sem_vazamento(erro.motivo)
+        _assert_sem_vazamento(str(erro))
+        _assert_sem_vazamento(repr(erro))
+        # A URL aparece redigida no motivo, e o motivo integra a mensagem completa.
+        assert URL_REDIGIDA_CITADA in erro.motivo
+        assert erro.motivo in str(erro)
+        assert erro.campo.endswith("homepage_url")
+        # O caminho pode conter "admin" legitimamente (ex.: runneradmin); nao e vazamento.
+        assert pasta in erro.arquivo
+
+    @pytest.mark.parametrize(
+        "mensagem",
+        [
+            f"{_CAMINHO_WIN}: fontes[0].homepage_url: URL com credenciais: '{URL_COM_CREDENCIAIS}'",  # token
+            f"{_CAMINHO_WIN}: fontes[0].homepage_url: URL com credenciais: 'https://{USUARIO_FICTICIO}@www.reuters.com/'",
+            "erro: token TOKEN123 exposto",
+            "erro: admin:TOKEN123",
+            "erro: https://admin:@www.reuters.com/",
+        ],
+    )
+    def test_detector_acusa_vazamento_sintetico(self, mensagem):
+        """Controle negativo: o verificador detecta token ou usuario nao redigidos."""
+        with pytest.raises(AssertionError):
+            _assert_sem_vazamento(mensagem)
+
+    @pytest.mark.parametrize(
+        "mensagem",
+        [
+            f"{_CAMINHO_WIN}: fontes[0].homepage_url: URL com credenciais: '{URL_REDIGIDA}'",
+            "/home/admin/config/fontes.yaml: fontes[0].homepage_url: 'https://www.reuters.com/'",
+        ],
+    )
+    def test_detector_aceita_mensagem_redigida(self, mensagem):
+        _assert_sem_vazamento(mensagem)
+
+    def test_vazamento_real_simulado_e_detectado(self, tmp_path, monkeypatch):
+        """Controle negativo ponta a ponta: sabotando a redacao (monkeypatch, sem
+        alterar o codigo de producao), o vazamento passa a ser detectado."""
+        import briefing.models as modelos
+
+        monkeypatch.setattr(modelos, "redigir_url", lambda url: url)
+        cfg_dir = tmp_path / "runneradmin" / "config"
+        shutil.copytree(CONFIG, cfg_dir)
+        _substituir(cfg_dir / "fontes.yaml", '"https://www.reuters.com/"', f'"{URL_COM_CREDENCIAIS}"')
+        with pytest.raises(ErroConfiguracao) as exc:
+            carregar_configuracao(cfg_dir)
+        assert SEGREDO_FICTICIO in exc.value.motivo  # a sabotagem expoe o segredo
+        for texto in (exc.value.motivo, str(exc.value)):
+            with pytest.raises(AssertionError):
+                _assert_sem_vazamento(texto)
 
     def test_redigir_url(self):
         assert redigir_url("https://a:b@h.com/x") == "https://***@h.com/x"
