@@ -1,0 +1,8 @@
+# Versoes exatas usadas na execucao dos testes da Fase 1A (Python 3.12.3, pip 26.3).
+# Uso: pip install -c constraints-dev.txt -e ".[dev]"
+iniconfig==2.3.1
+packaging==26.4
+pluggy==1.7.0
+Pygments==2.21.0
+pytest==8.4.2
+PyYAML==6.0.4

@@ -1,0 +1,85 @@
+# Temas editoriais do briefing.
+# - theme_id e estavel: nao renomear sem migracao.
+# - editorial_target_min/max e META quando houver noticias disponiveis; nao
+#   obriga preenchimento.
+# - Palavras-chave sao insumo para fases futuras; NAO ha classificacao
+#   automatica por palavra-chave na Fase 1A.
+versao: 1
+
+temas:
+  - theme_id: politica
+    name: "Política"
+    description: "Governo, Congresso, eleições, relações internacionais, políticas públicas e regulação."
+    geographic_scopes: [nacional, internacional]
+    coverage: ["Governo", "Congresso", "Eleições", "Relações internacionais", "Políticas públicas", "Regulação"]
+    keywords_pt: ["governo", "Congresso", "Câmara dos Deputados", "Senado", "eleições", "STF", "política externa", "regulação", "políticas públicas"]
+    keywords_en: ["government", "Congress", "parliament", "election", "foreign policy", "regulation", "public policy"]
+    source_families: [news_agency, general_press, financial_press, government, civil_society]
+    editorial_target_min: 3
+    editorial_target_max: 5
+
+  - theme_id: economia
+    name: "Economia"
+    description: "Juros, inflação, câmbio, PIB, política fiscal e comércio exterior."
+    geographic_scopes: [nacional, internacional]
+    coverage: ["Juros", "Inflação", "Câmbio", "PIB", "Política fiscal", "Comércio exterior"]
+    keywords_pt: ["juros", "Selic", "Copom", "inflação", "IPCA", "câmbio", "PIB", "política fiscal", "arcabouço fiscal", "balança comercial", "exportações", "importações"]
+    keywords_en: ["interest rates", "Federal Reserve", "inflation", "exchange rate", "GDP", "fiscal policy", "trade balance", "tariffs"]
+    source_families: [news_agency, general_press, financial_press, government, industry_association]
+    editorial_target_min: 3
+    editorial_target_max: 5
+
+  - theme_id: mercados_financeiros
+    name: "Mercados financeiros"
+    description: "Ibovespa, bolsas internacionais, commodities, empresas e indicadores financeiros."
+    geographic_scopes: [nacional, internacional]
+    coverage: ["Ibovespa", "Bolsas internacionais", "Commodities", "Empresas", "Indicadores financeiros"]
+    keywords_pt: ["Ibovespa", "B3", "bolsa", "ações", "dólar", "commodities", "minério de ferro", "petróleo", "resultados trimestrais"]
+    keywords_en: ["stocks", "S&P 500", "Nasdaq", "Wall Street", "commodities", "iron ore", "oil prices", "earnings"]
+    source_families: [news_agency, general_press, financial_press, government, corporate_primary]
+    editorial_target_min: 3
+    editorial_target_max: 5
+
+  - theme_id: inteligencia_artificial
+    name: "Inteligência artificial"
+    description: "Lançamentos, modelos, regulação, aplicações empresariais, automação e produtividade."
+    geographic_scopes: [nacional, internacional]
+    coverage: ["Lançamentos", "Modelos", "Regulação", "Aplicações empresariais", "Automação", "Produtividade"]
+    keywords_pt: ["inteligência artificial", "IA generativa", "modelo de linguagem", "regulação da IA", "automação", "produtividade"]
+    keywords_en: ["artificial intelligence", "generative AI", "language model", "AI regulation", "automation", "productivity"]
+    source_families: [news_agency, general_press, financial_press, government, scientific_institution, specialized_press, corporate_primary]
+    editorial_target_min: 3
+    editorial_target_max: 5
+
+  - theme_id: inovacoes_florestais
+    name: "Inovações florestais"
+    description: "Silvicultura, melhoramento genético, biotecnologia, mecanização, sensoriamento remoto, drones, LiDAR, carbono e pesquisa florestal."
+    geographic_scopes: [nacional, internacional]
+    coverage: ["Silvicultura", "Melhoramento genético", "Biotecnologia", "Mecanização", "Sensoriamento remoto", "Drones", "LiDAR", "Carbono", "Pesquisa florestal"]
+    keywords_pt: ["silvicultura", "melhoramento genético", "clonagem de eucalipto", "biotecnologia florestal", "mecanização florestal", "sensoriamento remoto", "drones", "LiDAR", "carbono florestal", "pesquisa florestal"]
+    keywords_en: ["silviculture", "tree breeding", "forest biotechnology", "forest mechanization", "remote sensing", "drones", "LiDAR", "forest carbon", "forestry research"]
+    source_families: [specialized_press, scientific_institution, civil_society, industry_association, corporate_primary]
+    editorial_target_min: 3
+    editorial_target_max: 5
+
+  - theme_id: mercado_aco
+    name: "Mercado do aço"
+    description: "Produção, preços, importações, exportações, tarifas, medidas antidumping e investimentos siderúrgicos no Brasil."
+    geographic_scopes: [nacional]
+    coverage: ["Produção", "Preços", "Importações", "Exportações", "Tarifas", "Medidas antidumping", "Investimentos siderúrgicos"]
+    keywords_pt: ["aço", "siderurgia", "produção de aço", "preço do aço", "importação de aço", "exportação de aço", "tarifa", "antidumping", "investimento siderúrgico"]
+    keywords_en: ["steel", "Brazil steel", "steel imports", "steel exports", "anti-dumping", "steel tariffs"]
+    source_families: [news_agency, general_press, financial_press, government, industry_association, specialized_press, corporate_primary]
+    editorial_target_min: 3
+    editorial_target_max: 5
+
+  - theme_id: setor_florestal
+    name: "Setor florestal"
+    description: "Madeira, celulose, papel, carvão vegetal, biorredutores, investimentos, expansão de áreas, mercado de produtos florestais, logística florestal e sustentabilidade no Brasil."
+    geographic_scopes: [nacional]
+    coverage: ["Madeira", "Celulose", "Papel", "Carvão vegetal", "Biorredutores", "Investimentos", "Expansão de áreas", "Mercado de produtos florestais", "Logística florestal", "Sustentabilidade"]
+    keywords_pt: ["madeira", "celulose", "papel", "carvão vegetal", "biorredutor", "eucalipto", "florestas plantadas", "investimento florestal", "logística florestal", "sustentabilidade"]
+    keywords_en: ["pulp", "paper", "eucalyptus", "charcoal", "planted forests", "Brazil forestry", "timber"]
+    source_families: [news_agency, general_press, financial_press, government, industry_association, specialized_press, scientific_institution, civil_society, corporate_primary]
+    editorial_target_min: 3
+    editorial_target_max: 5

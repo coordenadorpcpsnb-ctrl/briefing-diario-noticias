@@ -1,0 +1,200 @@
+# Regras de negocio do briefing.
+# Fonte unica de verdade para os parametros da janela temporal: o codigo
+# (src/briefing/janela.py) nao contem constantes de horario.
+#
+# status de cada regra:
+#   implementada          -> executada pelo codigo desta fase (conferido por teste)
+#   declarada_fase_futura -> requisito registrado; ainda NAO operacional
+#   politica_proposta     -> valor proposto, sujeito a aprovacao; NAO operacional
+#   decisao_pendente      -> depende de decisao do responsavel
+# Aparecer neste arquivo NAO torna uma regra operacional.
+versao: 1
+
+janela_temporal:
+  fuso: America/Sao_Paulo
+  # Intervalo semiaberto: inicio <= publicacao < fim_exclusivo.
+  fim_exclusivo: "08:00:00"
+  # Como o fim e apresentado ao leitor.
+  apresentacao_fim: "07h59"
+  inicio_por_dia:
+    segunda: {dias_antes: 3, horario: "08:00:00"}  # sexta-feira 08:00 (regra aprovada em 27/11/2026)
+    terca:   {dias_antes: 1, horario: "00:00:00"}
+    quarta:  {dias_antes: 1, horario: "00:00:00"}
+    quinta:  {dias_antes: 1, horario: "00:00:00"}
+    sexta:   {dias_antes: 1, horario: "00:00:00"}
+  historico_decisoes:
+    - data: "2026-11-27"
+      descricao: "Alteracao do inicio da janela de segunda-feira."
+      regra_anterior: "Segunda-feira: inicio na sexta-feira anterior as 18:00:00."
+      regra_aprovada: "Segunda-feira: inicio na sexta-feira anterior as 08:00:00."
+      justificativa: "Eliminar a lacuna semanal de dez horas (sexta 08:00-18:00) sem cobertura. As edicoes de 24, 25 e 26/11/2026 foram produzidas sob a regra vigente naquelas datas."
+
+regras:
+  # ---------------- Operacionais ----------------
+  - id: fuso_referencia
+    categoria: operacional
+    status: implementada
+    descricao: "Fuso de referencia em janela_temporal.fuso (IANA, via zoneinfo; nunca offset fixo)."
+  - id: dias_execucao
+    categoria: operacional
+    status: implementada
+    descricao: "Dias de execucao = chaves de janela_temporal.inicio_por_dia; sabado e domingo sao rejeitados com erro explicito."
+  - id: horario_corte
+    categoria: operacional
+    status: implementada
+    descricao: "Fim exclusivo em janela_temporal.fim_exclusivo; apresentado ao leitor como janela_temporal.apresentacao_fim."
+  - id: janela_segunda
+    categoria: operacional
+    status: implementada
+    descricao: "Janela de segunda-feira conforme janela_temporal.inicio_por_dia.segunda."
+  - id: janela_terca_a_sexta
+    categoria: operacional
+    status: implementada
+    descricao: "Janela de terca a sexta conforme janela_temporal.inicio_por_dia.{terca..sexta}."
+  - id: politica_feriados
+    categoria: operacional
+    status: implementada
+    descricao: "Politica inicial: feriados de segunda a sexta seguem as regras normais (sem calendario de feriados). Politica revisavel no futuro."
+  - id: horario_execucao_proposto
+    categoria: operacional
+    status: politica_proposta
+    fase_prevista: "1C"
+    valor: "08:03"
+    descricao: "Horario proposto de execucao (America/Sao_Paulo). Agendamento ainda nao existe."
+  - id: meta_publicacao
+    categoria: operacional
+    status: politica_proposta
+    fase_prevista: "6"
+    valor: "08:30"
+    descricao: "Meta proposta de publicacao ate este horario (America/Sao_Paulo)."
+  - id: calendario_feriados
+    categoria: operacional
+    status: decisao_pendente
+    fase_prevista: a_definir
+    descricao: "Eventual revisao da politica de feriados (pular edicao ou estender janela)."
+
+  # ---------------- Editoriais ----------------
+  - id: tratamento_datas_incompletas
+    categoria: editorial
+    status: implementada
+    descricao: "Datas sem horario, sem fuso ou ausentes recebem estados pendentes explicitos; nenhum estado pendente equivale a elegibilidade."
+  - id: meta_noticias_por_tema
+    categoria: editorial
+    status: declarada_fase_futura
+    fase_prevista: "2"
+    valor: {minimo: 3, maximo: 5}
+    descricao: "Meta de 3 a 5 noticias relevantes por tema, quando disponiveis (parametros por tema em temas.yaml). Nao obriga preenchimento."
+  - id: meta_destaques
+    categoria: editorial
+    status: declarada_fase_futura
+    fase_prevista: "3"
+    valor: 5
+    descricao: "Meta de cinco destaques, quando houver noticias suficientes."
+  - id: meta_tempo_leitura
+    categoria: editorial
+    status: declarada_fase_futura
+    fase_prevista: "5"
+    valor: {minimo_min: 20, maximo_min: 30}
+    descricao: "Tempo de leitura desejado de 20 a 30 minutos, sem preenchimento artificial."
+  - id: duas_fontes_independentes
+    categoria: editorial
+    status: declarada_fase_futura
+    fase_prevista: "2"
+    descricao: "Preferencia por duas fontes independentes por noticia; republicacoes da mesma agencia ou do mesmo comunicado primario nao contam como confirmacoes independentes."
+  - id: tres_familias_antes_de_ausencia
+    categoria: editorial
+    status: declarada_fase_futura
+    fase_prevista: "2"
+    valor: 3
+    descricao: "Exigir tres familias de fontes efetivamente consultadas (coleta concluida) antes de declarar ausencia de noticias em um tema. Falha tecnica nunca conta como consulta."
+  - id: identificar_fonte_unica
+    categoria: editorial
+    status: declarada_fase_futura
+    fase_prevista: "2"
+    descricao: "Sinalizar explicitamente noticias de fonte unica."
+  - id: deduplicacao_entre_edicoes
+    categoria: editorial
+    status: declarada_fase_futura
+    fase_prevista: "2"
+    descricao: "Deduplicar noticias entre edicoes consecutivas (sobreposicao intencional de 8h entre terca e sexta)."
+  - id: permitir_desdobramentos
+    categoria: editorial
+    status: declarada_fase_futura
+    fase_prevista: "2"
+    descricao: "Permitir desdobramentos relevantes de noticias anteriores, marcados como tal."
+  - id: proibir_preenchimento_artificial
+    categoria: editorial
+    status: declarada_fase_futura
+    fase_prevista: "3"
+    descricao: "Nao incluir noticias antigas ou irrelevantes para atingir metas."
+
+  # ---------------- Publicacao ----------------
+  - id: preservar_historico
+    categoria: publicacao
+    status: declarada_fase_futura
+    fase_prevista: "6"
+    descricao: "Preservar docs/index.html, docs/edicoes/manifest.json e edicoes historicas."
+  - id: commit_unico_html_manifesto
+    categoria: publicacao
+    status: declarada_fase_futura
+    fase_prevista: "6"
+    descricao: "Atualizar HTML da edicao e manifesto em um unico commit."
+  - id: proibir_sobrescrita
+    categoria: publicacao
+    status: declarada_fase_futura
+    fase_prevista: "6"
+    descricao: "Proibir sobrescrita nao autorizada; revisao editorial somente com autorizacao explicita."
+  - id: validacao_http_pos_publicacao
+    categoria: publicacao
+    status: declarada_fase_futura
+    fase_prevista: "6"
+    descricao: "Validar via HTTP a edicao e o manifesto apos a implantacao."
+  - id: registro_falhas_tecnicas
+    categoria: publicacao
+    status: declarada_fase_futura
+    fase_prevista: "7"
+    descricao: "Registrar falhas tecnicas de coleta, geracao e publicacao."
+
+  # ---------------- Seguranca ----------------
+  - id: carregamento_yaml_seguro
+    categoria: seguranca
+    status: implementada
+    descricao: "YAML lido com SafeLoader estrito (sem tags arbitrarias, sem chaves duplicadas)."
+  - id: validacao_sintatica_url
+    categoria: seguranca
+    status: implementada
+    descricao: "URLs de configuracao validadas sintaticamente (https, sem credenciais embutidas). Nao comprova existencia."
+  - id: resumo_sem_texto_integral
+    categoria: seguranca
+    status: implementada
+    descricao: "Article.summary limitado em tamanho; texto integral de materias nao e armazenado."
+  - id: sem_secrets_no_repositorio
+    categoria: seguranca
+    status: declarada_fase_futura
+    fase_prevista: "1C"
+    descricao: "Secrets somente em GitHub Secrets; nunca no repositorio nem em logs."
+  - id: conteudo_externo_nao_confiavel
+    categoria: seguranca
+    status: declarada_fase_futura
+    fase_prevista: "1B"
+    descricao: "Tratar todo conteudo coletado como dado nao confiavel, inclusive protecao SSRF obrigatoria nos coletores."
+  - id: nao_publicar_conteudo_inventado
+    categoria: seguranca
+    status: declarada_fase_futura
+    fase_prevista: "3"
+    descricao: "Nao publicar noticias, numeros, autores ou links inventados; IA nao e autoridade para datas, links ou cotacoes."
+  - id: nao_estimar_indicadores
+    categoria: seguranca
+    status: declarada_fase_futura
+    fase_prevista: "4"
+    descricao: "Nao estimar indicadores ausentes."
+  - id: respeitar_licenciamento
+    categoria: seguranca
+    status: declarada_fase_futura
+    fase_prevista: "1B"
+    descricao: "Respeitar termos de uso, licenciamento e direitos autorais das fontes."
+  - id: fonte_bhkp
+    categoria: editorial
+    status: decisao_pendente
+    fase_prevista: "4"
+    descricao: "Definir fonte e frequencia do indicador de celulose BHKP (indice de referencia identificado na Fase 0 e semanal e pago)."

@@ -1,0 +1,22 @@
+# Ambientes e caches Python
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Segredos e configuracoes locais (nunca versionar)
+.env
+.env.*
+*.pem
+*.key
+
+# Sistema operacional / editores
+.DS_Store
+.idea/
+.vscode/
