@@ -5,7 +5,7 @@ dos setores florestal e siderúrgico: pesquisa, validação, análise, geração
 publicação em <https://coordenadorpcpsnb-ctrl.github.io/briefing-diario-noticias/>,
 sem dependência operacional de conversas ou tarefas agendadas de assistentes de IA.
 
-> **Estado atual (Fases 1A e 1A.1):** existe apenas a **fundação técnica** — contratos de
+> **Estado atual (Fases 1A, 1A.1 e 1A.2):** existe apenas a **fundação técnica** — contratos de
 > dados, motor determinístico da janela temporal, configuração declarativa
 > validada e testes. **Não há** coleta de notícias, uso de APIs, inteligência
 > artificial, indicadores, geração de HTML, publicação ou workflows. As edições
@@ -30,7 +30,17 @@ Nesta fase, existem somente os estágios de **contratos** e **validação tempor
 
 ```
 pyproject.toml            # pacote Python (src layout), dependências
-constraints-dev.txt       # versões exatas usadas nos testes da Fase 1A
+requirements/
+  runtime.lock            # dependências de execução: versões exatas + hashes SHA-256
+  dev.lock                # execução + desenvolvimento (pytest), universal Linux/Windows
+  build.in, build.lock    # dependências de build (setuptools, wheel) + hashes
+ferramentas/
+  gerar_locks.sh          # regeneração dos locks (uv fixado, somente na manutenção)
+  verificacao_ci.py       # verificações de configuração e de instalação convencional
+  verificar_docs_baseline.py  # integridade de docs/ contra a baseline 9d2f2d9
+auditoria/
+  docs-baseline-9d2f2d9.sha256  # hashes SHA-256 completos de docs/ na baseline
+.github/workflows/ci.yml  # CI (somente verificação; sem deploy, coleta ou secrets)
 config/
   temas.yaml              # 7 temas editoriais
   fontes.yaml             # cadastro de fontes (nenhuma habilitada para coleta)
@@ -47,37 +57,73 @@ docs/                     # portal e edições publicadas (preservados, não ger
 
 - Python **3.12** (referência; `requires-python >= 3.12`).
 - Dependências de execução: `PyYAML` e `tzdata`. Desenvolvimento: `pytest`.
+  Build: `setuptools` e `wheel`.
 - `tzdata` fornece a base IANA de fusos ao `zoneinfo` quando o sistema
-  operacional não a possui. **Testado apenas em Linux**, inclusive com a base
-  do sistema desativada (`PYTHONTZPATH` vazio); Windows e imagens mínimas são
-  portabilidade **prevista, não testada**.
+  operacional não a possui.
+- Plataformas no CI: `ubuntu-24.04` e `windows-2025`, ambas com Python 3.12. A
+  compatibilidade só é **comprovada** pelo resultado efetivo do job B de cada
+  execução (veja os checks da PR); localmente, apenas Linux foi testado.
+  macOS não é verificado.
 
-### Instalação editável (desenvolvimento, a partir do checkout)
+### Instalação reproduzível (locks com hashes)
+
+Dependências externas são instaladas **somente** a partir dos locks, com
+`--require-hashes` (o pip recusa qualquer artefato cujo hash não confira) e
+`--no-deps` (nenhuma resolução adicional). O próprio projeto é local e não tem
+hash publicado: é instalado com `--no-deps` (e `--no-index` para o wheel), sem
+resolver nada novo.
+
+Desenvolvimento (projeto editável, como no CI):
 
 ```bash
 python3.12 -m venv .venv
 ```
 
 ```bash
-.venv/bin/pip install -c constraints-dev.txt -e ".[dev]"
-```
-
-A instalação editável dispensa ajustes de `PYTHONPATH` e encontra `config/` do
-checkout automaticamente. O arquivo `constraints-dev.txt` fixa as versões
-efetivamente usadas nos testes (dependências de build não estão fixadas — ver
-Limitações).
-
-### Instalação convencional (configuração externa)
-
-Os arquivos YAML **não** são empacotados no wheel. Fora do checkout, informe o
-diretório de configuração por argumento ou variável de ambiente:
-
-```bash
-pip install -c constraints-dev.txt .
+.venv/bin/python -m pip install --require-hashes --no-deps -r requirements/dev.lock -r requirements/build.lock
 ```
 
 ```bash
-BRIEFING_CONFIG_DIR=/caminho/para/config python -c "from briefing.configuracao import carregar_configuracao; print(carregar_configuracao().origem)"
+.venv/bin/python -m pip install --no-deps --no-build-isolation -e .
+```
+
+```bash
+.venv/bin/python -m pip check
+```
+
+No Windows, use `.venv\Scripts\python.exe` no lugar de `.venv/bin/python`.
+`--no-build-isolation` faz o build usar o setuptools/wheel instalados a partir
+de `build.lock`, em vez de baixar versões não fixadas.
+
+### Instalação convencional (wheel + configuração externa)
+
+Os arquivos YAML **não** são empacotados no wheel. Três etapas separadas:
+
+1. Build controlado (dependências de build verificadas):
+
+```bash
+python3.12 -m venv /tmp/build && /tmp/build/bin/python -m pip install --require-hashes --no-deps -r requirements/build.lock
+```
+
+```bash
+/tmp/build/bin/python -m pip wheel --no-deps --no-build-isolation -w dist .
+```
+
+2. Instalação em ambiente limpo: dependências externas com hashes e depois o
+   wheel local, sem nova resolução:
+
+```bash
+python3.12 -m venv /tmp/inst && /tmp/inst/bin/python -m pip install --require-hashes --no-deps -r requirements/runtime.lock
+```
+
+```bash
+/tmp/inst/bin/python -m pip install --no-deps --no-index dist/*.whl && /tmp/inst/bin/python -m pip check
+```
+
+3. Execução fora do checkout, com configuração externa:
+
+```bash
+cd /tmp && BRIEFING_CONFIG_DIR=/caminho/para/config /tmp/inst/bin/python -c "from briefing.configuracao import carregar_configuracao; print(carregar_configuracao().origem)"
 ```
 
 ### Resolução do diretório de configuração
@@ -95,6 +141,34 @@ silencioso**:
 O diretório precisa conter `temas.yaml`, `fontes.yaml` e `regras.yaml` como
 arquivos regulares. A configuração carregada registra `diretorio` e `origem`.
 
+### Estratégia de locks e atualização de dependências
+
+- Os locks são gerados por `ferramentas/gerar_locks.sh` com **uv 0.11.32**
+  (`uv pip compile --universal --python-version 3.12 --generate-hashes`). O uv
+  serve **apenas para gerar** os locks; instalação e CI usam somente pip.
+- Por que não pip-tools: o `pip-compile` resolve só para a plataforma em que
+  roda, e o pytest exige `colorama` apenas no Windows. O lock universal registra
+  `colorama==0.4.6 ; sys_platform == 'win32'`, de modo que um único arquivo
+  serve para Linux e Windows, sem listas duplicadas por plataforma.
+- `tests/test_dependencias.py` verifica a consistência: todo pacote fixado com
+  hash; os locks satisfazem `pyproject.toml` (`dependencies`, extra `dev`,
+  `[build-system].requires`); `runtime.lock` e `dev.lock` são idênticos nos
+  pacotes comuns; e o ambiente instalado corresponde exatamente ao `dev.lock`.
+
+Atualização:
+
+1. Em ambiente limpo, `pip install "uv==0.11.32"`.
+2. `bash ferramentas/gerar_locks.sh` mantém as versões; com `--upgrade`, busca
+   versões novas.
+3. Revise `git diff requirements/`: versões, pacotes novos ou removidos, notas
+   de versão.
+4. Valide os hashes reinstalando em ambiente virtual limpo com
+   `--require-hashes` (passos acima) e rode `pytest`.
+5. Faça o commit dos locks junto com a alteração e deixe o CI confirmar em
+   Linux e Windows.
+
+Não há atualização automática de dependências.
+
 ## Execução dos testes
 
 ```bash
@@ -102,7 +176,75 @@ arquivos regulares. A configuração carregada registra `diretorio` e `origem`.
 ```
 
 Os testes são determinísticos: não acessam internet, APIs pagas ou o relógio do
-sistema (a data de execução é sempre argumento explícito).
+sistema (a data de execução é sempre argumento explícito). A suíte exige um
+ambiente instalado pelos locks (`test_dependencias.py` compara versões).
+
+Verificações adicionais, também usadas no CI:
+
+```bash
+.venv/bin/python ferramentas/verificacao_ci.py configuracao
+```
+
+```bash
+.venv/bin/python ferramentas/verificar_docs_baseline.py
+```
+
+## Integração contínua (`.github/workflows/ci.yml`)
+
+**Gatilhos:** `pull_request` para `main`, `push` em `main` e `workflow_dispatch`
+(que só aparece depois que o workflow existe na branch padrão). Sem
+`pull_request_target`, sem agendamento, sem filtros de caminho, sem coleta,
+sem deploy e sem secrets.
+
+**Segurança:**
+- `permissions: contents: read`, sem redefinição por job;
+- checkout com `persist-credentials: false`;
+- Actions fixadas por SHA completo de commit (verificado nos repositórios
+  oficiais):
+  - `actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1` (v7.0.1)
+  - `actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0` (v7.1.0)
+- nenhuma expressão `${{ }}` dentro de `run:`; nenhum `curl` ou `wget`.
+
+**Controle operacional:**
+- concorrência por workflow e PR/ref, cancelando execuções obsoletas da mesma PR;
+- `timeout-minutes` em todos os jobs;
+- runners nomeados explicitamente;
+- sem `continue-on-error`;
+- cache de pip do `setup-python`, com chave por plataforma e por
+  `requirements/*.lock`. Os hashes continuam sendo verificados, e a ausência de
+  cache só torna a execução mais lenta.
+
+| Job | Ambiente | O que verifica |
+|---|---|---|
+| A — Qualidade e regressão | ubuntu-24.04, Python 3.12 | instalação por hashes, `pip check`, suíte completa, YAML/contratos/janelas/continuidade (`verificacao_ci.py configuracao`) |
+| B — Portabilidade e instalação | matriz ubuntu-24.04 e windows-2025, Python 3.12 | build do wheel com dependências de build fixadas; instalação convencional em venv limpo; execução fora do checkout com `BRIEFING_CONFIG_DIR` (7/25/33, janelas de segunda e de terça a sexta, erro sem configuração, fallback `tzdata` com `PYTHONTZPATH` vazio); `test_portabilidade.py` com o pacote instalado; suíte completa na plataforma |
+| C — Integridade e segurança | ubuntu-24.04, Python 3.12 | `docs/` idêntico à baseline 9d2f2d9 (SHA-256 completos e `git diff`); segurança estrutural do workflow; consistência dos locks; higiene do repositório (sem caches nem credenciais reais); `git diff --check` em relação à base |
+
+**Interpretação dos resultados:**
+- O CI só está aprovado quando **todos** os jobs, incluindo as duas entradas da
+  matriz, terminam com *success* **no SHA do HEAD atual** da PR. Para eventos
+  `pull_request`, o GitHub testa a referência sintética de merge
+  (`refs/pull/N/merge`).
+- Jobs pendentes, cancelados ou ignorados **não** contam como aprovação.
+- Testes locais e testes do GitHub Actions são evidências distintas: só os do
+  Actions comprovam o comportamento no Windows.
+
+**Diagnóstico de falhas:**
+- Abra a execução do job que falhou e leia o passo em vermelho.
+  - Falha de hash na instalação: lock adulterado, desatualizado ou com pacote
+    sem hash; regenere com o script e revise.
+  - Falha de `pip check`: incompatibilidade entre as versões fixadas.
+  - Falha de teste: o nome do teste e o `-ra` mostram a causa.
+  - Falha em `verificar_docs_baseline.py`: algo mudou em `docs/`.
+  - Falha nos testes de workflow: uma regra de segurança foi violada.
+- Reproduza localmente com os mesmos comandos dos passos (instalação por
+  hashes).
+- Reexecute apenas depois de entender a causa.
+
+**Política de `docs/`:** nesta fase, nenhuma alteração em `docs/` é aceita. Na
+Fase 6, a política deverá evoluir para permitir, de forma controlada, novas
+edições, atualização autorizada do manifesto e do portal e revisões
+históricas aprovadas. Isso ainda não está implementado.
 
 ## Regras temporais aprovadas
 
@@ -272,15 +414,21 @@ incoerências entre `mandatory` e `mandatory_themes`. A validação de URL é
   (inexistentes hoje em `America/Sao_Paulo`) usam a regra padrão do `zoneinfo`.
 - Fora do checkout (instalação convencional), a configuração precisa ser
   fornecida por argumento ou `BRIEFING_CONFIG_DIR`; os YAML não vão no wheel.
-- Reprodutibilidade parcial: `constraints-dev.txt` não tem hashes, não fixa as
-  dependências de build (setuptools/wheel, resolvidas pelo pip em ambiente
-  isolado) e foi validado apenas com Python 3.12.3 em Linux. Tratado na
-  Fase 1A.2 (CI e reprodutibilidade), ainda não implementada.
+- Reprodutibilidade: as dependências externas e de build estão fixadas e
+  verificadas por hash, mas a versão do próprio `pip` (e a patch do Python 3.12
+  no CI) não é fixada; o build do wheel **não** foi comprovado como
+  reproduzível byte a byte.
+- Não há ferramenta de cobertura de código nem de análise de vulnerabilidades
+  (ex.: pip-audit). Testes aprovados **não** comprovam ausência de
+  vulnerabilidades nem cobertura integral.
+- Os testes de segurança do workflow são estruturais (padrões no YAML) e
+  complementam, mas não substituem, revisão humana.
 - O limite de 600 caracteres do trecho é técnico e provisório; truncamento
   respeita caracteres e marcas combinantes, mas não clusters de grafemas
   complexos (ex.: emojis compostos por ZWJ) — em geral inofensivo, porém
   documentado.
-- Não existe CI: os testes rodam apenas localmente.
+- O CI não tem proteção de branch associada (configuração administrativa fora
+  do escopo): um check com falha não bloqueia o merge automaticamente.
 - Proteção contra SSRF não existe porque ainda não há requisições HTTP; é
   **requisito obrigatório da Fase 1B**.
 
@@ -290,8 +438,8 @@ incoerências entre `mandatory` e `mandatory_themes`. A validação de URL é
 |---|---|---|
 | 0 | Diagnóstico e baseline | concluída |
 | 1A | Fundação técnica e regras temporais | em revisão (PR #1) |
-| 1A.1 | Correções de contratos, portabilidade e configuração | **etapa atual** |
-| 1A.2 | CI e reprodutibilidade | proposta, não iniciada |
+| 1A.1 | Correções de contratos, portabilidade e configuração | em revisão (PR #1) |
+| 1A.2 | CI e reprodutibilidade | **etapa atual** |
 | 1B | Coletores RSS e fontes diretas (com proteção SSRF) | não iniciada |
 | 1C | Workflow experimental de coleta | não iniciada |
 | 1D | Avaliação e integração de API de pesquisa | não iniciada |
