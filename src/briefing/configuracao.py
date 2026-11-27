@@ -9,6 +9,7 @@
 
 from __future__ import annotations
 
+import os
 import re
 from dataclasses import dataclass
 from datetime import date, time
@@ -24,6 +25,7 @@ from .models import (
     SourceConfig,
     SourceFamily,
     ThemeConfig,
+    validar_limite_trecho,
 )
 
 __all__ = [
@@ -35,7 +37,10 @@ __all__ = [
     "TEMAS_OBRIGATORIOS",
     "TEMAS_SOMENTE_NACIONAIS",
     "FONTES_FLORESTAIS_OBRIGATORIAS",
+    "ENV_CONFIG_DIR",
+    "ARQUIVOS_CONFIG",
     "diretorio_config_padrao",
+    "resolver_diretorio_config",
     "carregar_yaml",
     "carregar_temas",
     "carregar_fontes",
@@ -73,7 +78,7 @@ REGRAS_IMPLEMENTADAS = frozenset(
         "tratamento_datas_incompletas",
         "carregamento_yaml_seguro",
         "validacao_sintatica_url",
-        "resumo_sem_texto_integral",
+        "trecho_fonte_limitado",
     }
 )
 
@@ -136,9 +141,79 @@ def carregar_yaml(caminho: str | Path) -> Any:
         raise ErroConfiguracao(caminho, "<yaml>", f"YAML invalido ou inseguro: {exc}") from None
 
 
-def diretorio_config_padrao() -> Path:
-    """``<raiz do repositorio>/config`` (layout src com instalacao editavel)."""
-    return Path(__file__).resolve().parents[2] / "config"
+ENV_CONFIG_DIR = "BRIEFING_CONFIG_DIR"
+ARQUIVOS_CONFIG = ("temas.yaml", "fontes.yaml", "regras.yaml")
+_NOME_PROJETO = 'name = "briefing-diario-noticias"'
+
+
+def diretorio_config_padrao() -> Path | None:
+    """``config/`` do checkout do repositorio, somente se inequivocamente identificado.
+
+    Exige o layout ``<raiz>/src/briefing/`` com ``<raiz>/pyproject.toml`` deste
+    projeto. Nao depende do diretorio de trabalho atual e nao procura em
+    diretorios ancestrais arbitrarios. Em instalacao convencional
+    (``site-packages``) retorna ``None``.
+    """
+    pacote = Path(__file__).resolve().parent
+    raiz = pacote.parent.parent
+    if pacote.name != "briefing" or pacote.parent.name != "src":
+        return None
+    pyproject = raiz / "pyproject.toml"
+    try:
+        if not pyproject.is_file() or _NOME_PROJETO not in pyproject.read_text(encoding="utf-8"):
+            return None
+    except OSError:
+        return None
+    return raiz / "config"
+
+
+def _validar_diretorio(caminho: Path, origem: str) -> Path:
+    if not caminho.exists():
+        raise ErroConfiguracao(caminho, origem, "diretorio de configuracao inexistente")
+    if not caminho.is_dir():
+        raise ErroConfiguracao(caminho, origem, "o caminho nao e um diretorio")
+    for nome in ARQUIVOS_CONFIG:
+        arq = caminho / nome
+        if not arq.exists():
+            raise ErroConfiguracao(caminho, origem, f"arquivo obrigatorio ausente: {nome}")
+        if not arq.is_file():
+            raise ErroConfiguracao(caminho, origem, f"{nome} nao e um arquivo regular")
+    return caminho
+
+
+def resolver_diretorio_config(
+    diretorio: str | Path | None = None, *, ambiente: Mapping[str, str] | None = None
+) -> tuple[Path, str]:
+    """Resolve o diretorio de configuracao. Retorna ``(caminho, origem)``.
+
+    Precedencia (sem fallback silencioso):
+
+    1. ``diretorio`` informado pelo chamador -- se invalido, erro.
+    2. Variavel de ambiente ``BRIEFING_CONFIG_DIR`` -- se definida e invalida
+       (inclusive vazia), erro.
+    3. ``config/`` do checkout do repositorio, se inequivocamente identificado.
+    4. Erro explicito.
+    """
+    env = os.environ if ambiente is None else ambiente
+    if diretorio is not None:
+        origem = "argumento explicito"
+        return _validar_diretorio(Path(diretorio), origem), origem
+    if ENV_CONFIG_DIR in env:
+        origem = f"variavel de ambiente {ENV_CONFIG_DIR}"
+        valor = env[ENV_CONFIG_DIR]
+        if not valor.strip():
+            raise ErroConfiguracao("<vazio>", origem, "variavel definida, mas vazia")
+        return _validar_diretorio(Path(valor), origem), origem
+    padrao = diretorio_config_padrao()
+    if padrao is not None:
+        origem = "checkout do repositorio"
+        return _validar_diretorio(padrao, origem), origem
+    raise ErroConfiguracao(
+        "<nenhum>",
+        "diretorio de configuracao",
+        f"nenhuma configuracao disponivel: informe o diretorio explicitamente ou "
+        f"defina {ENV_CONFIG_DIR} (instalacao fora do checkout do repositorio)",
+    )
 
 
 # --------------------------------------------------------------------------
@@ -288,6 +363,7 @@ class ConfigRegras:
     apresentacao_fim: str
     decisoes: tuple[DecisaoRegistrada, ...]
     regras: Mapping[str, RegraDeclarada]
+    source_excerpt_max_chars: int
 
     def com_status(self, status: str) -> list[RegraDeclarada]:
         return [r for r in self.regras.values() if r.status == status]
@@ -344,8 +420,14 @@ def _carregar_janela(dados: Any, arquivo: Path) -> tuple[RegrasJanela, str, tupl
 def carregar_regras(caminho: str | Path) -> ConfigRegras:
     arquivo = Path(caminho)
     raiz = _mapa(carregar_yaml(arquivo), arquivo, "<raiz>")
-    _chaves(raiz, arquivo, "<raiz>", {"versao", "janela_temporal", "regras"})
+    _chaves(raiz, arquivo, "<raiz>", {"versao", "janela_temporal", "limites", "regras"})
     janela, apresentacao, decisoes = _carregar_janela(raiz["janela_temporal"], arquivo)
+    limites = _mapa(raiz["limites"], arquivo, "limites")
+    _chaves(limites, arquivo, "limites", {"source_excerpt_max_chars"})
+    try:
+        limite_trecho = validar_limite_trecho(limites["source_excerpt_max_chars"])
+    except ErroValidacao as exc:
+        raise ErroConfiguracao(arquivo, f"limites.{exc.campo}", exc.motivo) from None
 
     regras: dict[str, RegraDeclarada] = {}
     for i, item in enumerate(_lista(raiz["regras"], arquivo, "regras")):
@@ -385,7 +467,7 @@ def carregar_regras(caminho: str | Path) -> ConfigRegras:
     a_menos = sorted(REGRAS_IMPLEMENTADAS - implementadas)
     if a_menos:
         raise ErroConfiguracao(arquivo, "regras", f"implementadas no codigo mas nao declaradas: {a_menos}")
-    return ConfigRegras(janela, apresentacao, decisoes, regras)
+    return ConfigRegras(janela, apresentacao, decisoes, regras, limite_trecho)
 
 
 # --------------------------------------------------------------------------
@@ -398,12 +480,19 @@ class Configuracao:
     temas: Mapping[str, ThemeConfig]
     fontes: Mapping[str, SourceConfig]
     regras: ConfigRegras
+    diretorio: Path
+    origem: str
 
 
-def carregar_configuracao(diretorio: str | Path | None = None) -> Configuracao:
-    """Carrega e valida ``temas.yaml``, ``fontes.yaml`` e ``regras.yaml``."""
-    base = Path(diretorio) if diretorio is not None else diretorio_config_padrao()
+def carregar_configuracao(
+    diretorio: str | Path | None = None, *, ambiente: Mapping[str, str] | None = None
+) -> Configuracao:
+    """Carrega e valida ``temas.yaml``, ``fontes.yaml`` e ``regras.yaml``.
+
+    O diretorio e resolvido por :func:`resolver_diretorio_config`.
+    """
+    base, origem = resolver_diretorio_config(diretorio, ambiente=ambiente)
     temas = carregar_temas(base / "temas.yaml")
     fontes = carregar_fontes(base / "fontes.yaml", temas)
     regras = carregar_regras(base / "regras.yaml")
-    return Configuracao(temas=temas, fontes=fontes, regras=regras)
+    return Configuracao(temas=temas, fontes=fontes, regras=regras, diretorio=base, origem=origem)

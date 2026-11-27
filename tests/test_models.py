@@ -9,7 +9,6 @@ import pytest
 from zoneinfo import ZoneInfo
 
 from briefing.models import (
-    SUMMARY_MAX_CHARS,
     Article,
     CollectionResult,
     CollectionStatus,
@@ -146,10 +145,11 @@ class TestGrupoEArticle:
         with pytest.raises(ErroValidacao, match="campos desconhecidos"):
             Article.from_dict(d)
 
-    def test_resumo_limitado(self):
-        assert _artigo(summary="x" * SUMMARY_MAX_CHARS)
-        with pytest.raises(ErroValidacao, match="texto integral"):
-            _artigo(summary="x" * (SUMMARY_MAX_CHARS + 1))
+    def test_trecho_nao_normalizado_rejeitado(self):
+        # o contrato validado so aceita trecho ja normalizado
+        assert _artigo(source_excerpt="Trecho curto.").source_excerpt == "Trecho curto."
+        with pytest.raises(ErroValidacao, match="normaliz"):
+            _artigo(source_excerpt="  Trecho\n com quebras ")
 
 
 class TestGrupoEEvidencia:
@@ -191,16 +191,16 @@ class TestGrupoEJanelaContrato:
 
 
 class TestGrupoECollectionResult:
-    def test_vazio_confirma_ausencia(self):
-        assert _resultado().confirma_ausencia
+    def test_vazio_e_coleta_vazia_confirmada(self):
+        assert _resultado().coleta_vazia_confirmada
 
-    def test_falha_tecnica_nao_confirma_ausencia(self):
+    def test_falha_tecnica_nao_e_coleta_vazia(self):
         r = _resultado(status="technical_failure", error_code="timeout", error_message="tempo limite")
-        assert not r.confirma_ausencia and r.articles_found == 0
+        assert not r.coleta_vazia_confirmada and r.articles_found == 0
 
     def test_parcial_distinto_de_vazio(self):
         r = _resultado(status="partial", error_code="pagina_2_falhou", articles=(_artigo(),), articles_found=1)
-        assert not r.confirma_ausencia and r.status is CollectionStatus.PARTIAL
+        assert not r.coleta_vazia_confirmada and r.status is CollectionStatus.PARTIAL
 
     def test_parcial_exige_erro(self):
         with pytest.raises(ErroValidacao, match="error_code"):
@@ -229,13 +229,13 @@ class TestGrupoECollectionResult:
 
     def test_nao_consultada_sem_horarios(self):
         r = _resultado(status="source_not_queried", started_at=None, finished_at=None)
-        assert not r.confirma_ausencia
+        assert not r.coleta_vazia_confirmada
         with pytest.raises(ErroValidacao):
             _resultado(status="source_not_configured")  # tem horarios
 
     def test_acesso_restrito(self):
         r = _resultado(status="access_restricted", error_code="http_403")
-        assert not r.confirma_ausencia
+        assert not r.coleta_vazia_confirmada
 
     def test_artigo_de_outra_fonte(self):
         with pytest.raises(ErroValidacao, match="outras fontes"):

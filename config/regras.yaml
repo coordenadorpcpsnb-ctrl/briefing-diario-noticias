@@ -29,6 +29,13 @@ janela_temporal:
       regra_aprovada: "Segunda-feira: inicio na sexta-feira anterior as 08:00:00."
       justificativa: "Eliminar a lacuna semanal de dez horas (sexta 08:00-18:00) sem cobertura. As edicoes de 24, 25 e 26/11/2026 foram produzidas sob a regra vigente naquelas datas."
 
+# Limites tecnicos (fonte unica de verdade).
+limites:
+  # Maximo de caracteres de Article.source_excerpt (trecho/descricao fornecido
+  # pela fonte, apos normalizacao). Limite tecnico INICIAL e PROVISORIO; nao e
+  # garantia juridica de conformidade com direitos autorais.
+  source_excerpt_max_chars: 600
+
 regras:
   # ---------------- Operacionais ----------------
   - id: fuso_referencia
@@ -164,10 +171,10 @@ regras:
     categoria: seguranca
     status: implementada
     descricao: "URLs de configuracao validadas sintaticamente (https, sem credenciais embutidas). Nao comprova existencia."
-  - id: resumo_sem_texto_integral
+  - id: trecho_fonte_limitado
     categoria: seguranca
     status: implementada
-    descricao: "Article.summary limitado em tamanho; texto integral de materias nao e armazenado."
+    descricao: "Article.source_excerpt (trecho da fonte, nao analise editorial) normalizado e truncado com sinalizacao (excerpt_truncated) ao limite limites.source_excerpt_max_chars; texto integral nao e armazenado. Limite tecnico provisorio, sem valor de garantia juridica."
   - id: sem_secrets_no_repositorio
     categoria: seguranca
     status: declarada_fase_futura

@@ -21,6 +21,7 @@ from __future__ import annotations
 
 import hashlib
 import re
+import unicodedata
 from dataclasses import dataclass, field, fields
 from datetime import date, datetime, timedelta
 from enum import Enum
@@ -52,14 +53,13 @@ __all__ = [
     "TemporalDecision",
     "CollectionResult",
     "gerar_article_id",
+    "validar_limite_trecho",
+    "normalizar_trecho",
+    "verificar_limite_trecho",
     "validar_url",
     "redigir_url",
     "validar_fuso_iana",
 ]
-
-# Limite do resumo armazenado: impede guardar texto integral de materias
-# protegidas por direitos autorais. Resumo e sintese propria, nao copia.
-SUMMARY_MAX_CHARS = 600
 
 _ID_RE = re.compile(r"^[a-z][a-z0-9_]{1,63}$")
 _LANG_RE = re.compile(r"^[a-z]{2}(-[A-Z]{2})?$")
@@ -653,6 +653,65 @@ class RawPublicationMetadata:
 
 
 # --------------------------------------------------------------------------
+# Trecho da fonte (source_excerpt)
+# --------------------------------------------------------------------------
+
+
+def validar_limite_trecho(valor: Any, campo: str = "source_excerpt_max_chars") -> int:
+    """Valida o limite de caracteres do trecho: inteiro positivo (nao bool)."""
+    if isinstance(valor, bool) or not isinstance(valor, int):
+        raise ErroValidacao(campo, f"inteiro positivo esperado, recebido {type(valor).__name__}")
+    if valor <= 0:
+        raise ErroValidacao(campo, f"inteiro positivo esperado, recebido {valor}")
+    return valor
+
+
+def _normalizar_texto(texto: str) -> str:
+    # NFC + colapso de espacos (inclui quebras de linha/tabulacoes) + strip.
+    return " ".join(unicodedata.normalize("NFC", texto).split())
+
+
+def normalizar_trecho(texto: str | None, limite: int) -> tuple[str | None, bool]:
+    """Normaliza o trecho/descricao **recebido da fonte**.
+
+    Deterministico, sem IA e sem rede. Retorna ``(trecho, truncado)``:
+
+    - ``None`` -> ``(None, False)``.
+    - Texto vazio ou so com espacos -> ``(None, False)`` (tratado como ausente).
+    - Normalizacao: Unicode NFC, espacos internos colapsados, bordas removidas.
+    - Ate ``limite`` caracteres (apos normalizacao) -> preservado, ``False``.
+    - Acima do limite -> reduzido a no maximo ``limite`` caracteres, ``True``.
+      O corte e por caractere (code point), nunca por byte; nao separa um
+      caractere de suas marcas combinantes; nao acrescenta reticencias.
+    """
+    validar_limite_trecho(limite, "limite")
+    if texto is None:
+        return None, False
+    if not isinstance(texto, str):
+        raise ErroValidacao("texto", "texto ou nulo esperado")
+    normal = _normalizar_texto(texto)
+    if not normal:
+        return None, False
+    if len(normal) <= limite:
+        return normal, False
+    corte = limite
+    # Nao deixar marca combinante orfa: recua ate o inicio do cluster.
+    while corte > 0 and unicodedata.combining(normal[corte]):
+        corte -= 1
+    trecho = normal[:corte].rstrip() or normal[:limite].rstrip()
+    return trecho, True
+
+
+def verificar_limite_trecho(artigo: "Article", limite: int) -> None:
+    """Confere um Article ja construido contra o limite configurado."""
+    validar_limite_trecho(limite, "limite")
+    if artigo.source_excerpt is not None and len(artigo.source_excerpt) > limite:
+        raise ErroValidacao(
+            "source_excerpt", f"excede o limite configurado de {limite} caracteres"
+        )
+
+
+# --------------------------------------------------------------------------
 # Article
 # --------------------------------------------------------------------------
 
@@ -685,6 +744,17 @@ class Article:
     - ``updated_at`` nunca substitui ``published_at``; se ambos existirem,
       ``updated_at >= published_at``.
     - ``retrieved_at`` e o momento da coleta, nunca a data de publicacao.
+
+    Trecho da fonte:
+
+    - ``source_excerpt`` e exclusivamente um trecho/descricao fornecido pela
+      fonte, ja normalizado por :func:`normalizar_trecho`. NAO e analise
+      editorial nem resumo executivo (modelo separado, Fase 3).
+    - ``excerpt_truncated=True`` exige ``source_excerpt``.
+    - O limite de tamanho vem de ``config/regras.yaml``
+      (``limites.source_excerpt_max_chars``) e e aplicado por
+      :meth:`criar_a_partir_da_fonte` / :func:`verificar_limite_trecho`; o
+      modelo nao carrega YAML.
     """
 
     article_id: str
@@ -705,7 +775,8 @@ class Article:
     publication_timezone: str | None = None
     updated_at: datetime | None = None
     upstream_agency: str | None = None
-    summary: str | None = None
+    source_excerpt: str | None = None
+    excerpt_truncated: bool = False
 
     def __post_init__(self) -> None:
         _exigir_id(self.source_id, "source_id")
@@ -737,13 +808,15 @@ class Article:
         )
         for nome in ("author", "upstream_agency"):
             _exigir_texto(getattr(self, nome), nome, opcional=True)
-        if self.summary is not None:
-            _exigir_texto(self.summary, "summary")
-            if len(self.summary) > SUMMARY_MAX_CHARS:
+        _exigir_bool(self.excerpt_truncated, "excerpt_truncated")
+        if self.source_excerpt is not None:
+            _exigir_texto(self.source_excerpt, "source_excerpt")
+            if _normalizar_texto(self.source_excerpt) != self.source_excerpt:
                 raise ErroValidacao(
-                    "summary",
-                    f"excede {SUMMARY_MAX_CHARS} caracteres; nao armazenar texto integral",
+                    "source_excerpt", "trecho nao normalizado; use normalizar_trecho()"
                 )
+        elif self.excerpt_truncated:
+            raise ErroValidacao("excerpt_truncated", "True exige source_excerpt")
         _exigir_aware(self.published_at, "published_at", opcional=True)
         _exigir_aware(self.updated_at, "updated_at", opcional=True)
         if self.published_date is not None and (
@@ -800,6 +873,23 @@ class Article:
             raise ErroValidacao("article_id", "e calculado automaticamente por criar()")
         kwargs["article_id"] = gerar_article_id(kwargs.get("source_id"), kwargs.get("original_url"))  # type: ignore[arg-type]
         return cls(**kwargs)
+
+    @classmethod
+    def criar_a_partir_da_fonte(
+        cls, *, trecho_bruto: str | None, limite_trecho: int, **kwargs: Any
+    ) -> "Article":
+        """Caminho explicito para descricoes recebidas da fonte.
+
+        Normaliza ``trecho_bruto`` com o limite **ja validado da configuracao**
+        e cria o Article. Uma descricao extensa e truncada e sinalizada, nunca
+        causa a perda do artigo. O truncamento nao afeta ID, titulo, URL,
+        autor, datas, evidencia ou elegibilidade temporal.
+        """
+        for proibido in ("source_excerpt", "excerpt_truncated"):
+            if proibido in kwargs:
+                raise ErroValidacao(proibido, "e definido pela normalizacao do trecho bruto")
+        trecho, truncado = normalizar_trecho(trecho_bruto, limite_trecho)
+        return cls.criar(source_excerpt=trecho, excerpt_truncated=truncado, **kwargs)
 
     def to_dict(self) -> dict[str, Any]:
         return _to_dict(self)
@@ -924,9 +1014,11 @@ _STATUS_COM_ERRO = {
 class CollectionResult:
     """Resultado da coleta de uma fonte para uma edicao.
 
-    Somente ``SUCCESS_EMPTY`` confirma ausencia de noticias naquela fonte;
-    falha tecnica, acesso restrito, coleta parcial ou fonte nao consultada
-    **nunca** equivalem a ausencia confirmada (ver :attr:`confirma_ausencia`).
+    Ver :attr:`coleta_vazia_confirmada`: so ``SUCCESS_EMPTY`` indica que esta
+    operacao de coleta terminou corretamente com zero itens. Falha tecnica,
+    acesso restrito, coleta parcial ou fonte nao consultada nunca equivalem a
+    coleta vazia. Nenhum estado deste contrato representa ausencia de noticias
+    em um tema -- essa conclusao pertence a auditoria de cobertura (Fase 2).
     """
 
     source_id: str
@@ -990,8 +1082,14 @@ class CollectionResult:
             raise ErroValidacao("error_code", f"status {s.value} nao admite erro")
 
     @property
-    def confirma_ausencia(self) -> bool:
-        """True somente para coleta concluida sem resultados."""
+    def coleta_vazia_confirmada(self) -> bool:
+        """True somente se ESTA operacao de coleta terminou corretamente com 0 itens.
+
+        Nao significa: ausencia de noticias em um tema; ausencia de publicacoes
+        no periodo; ausencia em todos os canais da fonte; cobertura suficiente;
+        nem confirmacao editorial. A ausencia tematica sera concluida apenas
+        pela auditoria de cobertura (Fase 2), a partir de varias fontes.
+        """
         return self.status is CollectionStatus.SUCCESS_EMPTY
 
     def to_dict(self) -> dict[str, Any]:

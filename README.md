@@ -5,7 +5,7 @@ dos setores florestal e siderúrgico: pesquisa, validação, análise, geração
 publicação em <https://coordenadorpcpsnb-ctrl.github.io/briefing-diario-noticias/>,
 sem dependência operacional de conversas ou tarefas agendadas de assistentes de IA.
 
-> **Estado atual (Fase 1A):** existe apenas a **fundação técnica** — contratos de
+> **Estado atual (Fases 1A e 1A.1):** existe apenas a **fundação técnica** — contratos de
 > dados, motor determinístico da janela temporal, configuração declarativa
 > validada e testes. **Não há** coleta de notícias, uso de APIs, inteligência
 > artificial, indicadores, geração de HTML, publicação ou workflows. As edições
@@ -46,7 +46,13 @@ docs/                     # portal e edições publicadas (preservados, não ger
 ## Requisitos e instalação
 
 - Python **3.12** (referência; `requires-python >= 3.12`).
-- Dependências de execução: `PyYAML`. Desenvolvimento: `pytest`.
+- Dependências de execução: `PyYAML` e `tzdata`. Desenvolvimento: `pytest`.
+- `tzdata` fornece a base IANA de fusos ao `zoneinfo` quando o sistema
+  operacional não a possui. **Testado apenas em Linux**, inclusive com a base
+  do sistema desativada (`PYTHONTZPATH` vazio); Windows e imagens mínimas são
+  portabilidade **prevista, não testada**.
+
+### Instalação editável (desenvolvimento, a partir do checkout)
 
 ```bash
 python3.12 -m venv .venv
@@ -56,8 +62,38 @@ python3.12 -m venv .venv
 .venv/bin/pip install -c constraints-dev.txt -e ".[dev]"
 ```
 
-A instalação editável dispensa ajustes de `PYTHONPATH`. O arquivo
-`constraints-dev.txt` fixa as versões efetivamente usadas nos testes.
+A instalação editável dispensa ajustes de `PYTHONPATH` e encontra `config/` do
+checkout automaticamente. O arquivo `constraints-dev.txt` fixa as versões
+efetivamente usadas nos testes (dependências de build não estão fixadas — ver
+Limitações).
+
+### Instalação convencional (configuração externa)
+
+Os arquivos YAML **não** são empacotados no wheel. Fora do checkout, informe o
+diretório de configuração por argumento ou variável de ambiente:
+
+```bash
+pip install -c constraints-dev.txt .
+```
+
+```bash
+BRIEFING_CONFIG_DIR=/caminho/para/config python -c "from briefing.configuracao import carregar_configuracao; print(carregar_configuracao().origem)"
+```
+
+### Resolução do diretório de configuração
+
+`carregar_configuracao(diretorio=None)` usa, nesta ordem, **sem fallback
+silencioso**:
+
+1. o diretório informado pelo chamador (se inválido → erro);
+2. a variável `BRIEFING_CONFIG_DIR` (se definida, mesmo vazia, e inválida → erro);
+3. `config/` do checkout, somente se o pacote estiver em `<raiz>/src/briefing/`
+   e `<raiz>/pyproject.toml` for deste projeto (não depende do diretório de
+   trabalho e não procura em ancestrais);
+4. erro explícito.
+
+O diretório precisa conter `temas.yaml`, `fontes.yaml` e `regras.yaml` como
+arquivos regulares. A configuração carregada registra `diretorio` e `origem`.
 
 ## Execução dos testes
 
@@ -149,15 +185,42 @@ Elegibilidade temporal **não** é aprovação editorial nem confirmação indep
   possibilidades futuras, não coletores implementados.
 - `RawPublicationMetadata` — metadado recebido.
 - `Article` — notícia validada; `article_id` = SHA-256 de `source_id` + URL
-  original (estável, sem aleatoriedade); `summary` limitado a 600 caracteres
-  (texto integral não é armazenado).
+  original (estável, sem aleatoriedade).
+  - `source_excerpt` — **exclusivamente** um trecho/descrição fornecido pela
+    fonte, normalizado; **não** é análise editorial nem resumo executivo (estes
+    terão modelo próprio na Fase 3, ainda não implementado).
+  - `excerpt_truncated` — `True` quando o trecho foi reduzido ao limite;
+    `True` sem `source_excerpt` é rejeitado.
+  - Limite técnico em `config/regras.yaml` → `limites.source_excerpt_max_chars`
+    (600, **provisório**; não é garantia jurídica de conformidade com direitos
+    autorais). Fonte única: nenhuma constante no código.
+  - Caminho para descrições recebidas: `Article.criar_a_partir_da_fonte(
+    trecho_bruto=..., limite_trecho=cfg.regras.source_excerpt_max_chars, ...)`.
+    Uma descrição extensa é truncada e sinalizada, **nunca** causa a perda do
+    artigo, e não altera ID, título, URL, autor, datas, evidência ou
+    elegibilidade temporal. `verificar_limite_trecho()` confere artigos já
+    construídos. O modelo não carrega YAML.
+  - `normalizar_trecho(texto, limite)` → `(trecho, truncado)`: `None` ou texto
+    vazio/só espaços → `(None, False)`; aplica Unicode NFC, colapsa espaços e
+    remove bordas; corta por caractere (nunca por byte), sem separar marcas
+    combinantes e sem reticências. Determinístico, sem IA e sem rede.
+  - Alteração de contrato (Fase 1A.1): `summary` foi substituído por
+    `source_excerpt` + `excerpt_truncated`. Não havia dados persistidos, logo
+    não há migração; `from_dict` rejeita o campo antigo.
 - `PublicationWindow` — janela semiaberta.
 - `TemporalDecision` — decisão com `status`, `reason_code`, descrição, janela e
   `eligible` explícito.
-- `CollectionResult` — contrato de resultado de coleta (coletores não
-  implementados). Somente `success_empty` confirma ausência; falha técnica,
-  acesso restrito, coleta parcial ou fonte não consultada **nunca** equivalem a
-  ausência confirmada.
+- `CollectionResult` — contrato de resultado de **uma** operação de coleta
+  (coletores não implementados). `coleta_vazia_confirmada` é `True` somente
+  para `success_empty`: a operação terminou corretamente e retornou zero itens.
+  Falha técnica, acesso restrito, coleta parcial ou fonte não consultada nunca
+  são coleta vazia.
+  - **Coleta vazia ≠ ausência temática.** A propriedade não indica ausência de
+    notícias em um tema, no período, em todos os canais da fonte, nem
+    cobertura suficiente ou confirmação editorial. Concluir ausência temática
+    cabe à futura auditoria de cobertura (Fase 2), que exigirá três famílias de
+    fontes efetivamente consultadas. (A propriedade antiga `confirma_ausencia`
+    foi removida na Fase 1A.1, sem alias.)
 
 `from_dict` é estrito (rejeita campos desconhecidos); `to_dict` gera JSON puro.
 
@@ -170,8 +233,10 @@ Elegibilidade temporal **não** é aprovação editorial nem confirmação indep
   Palavras-chave ainda não são usadas (sem classificação automática).
 - **Fontes** (`config/fontes.yaml`): 25 fontes, **nenhuma habilitada**, todas
   com acesso `unverified`, sem `rss_url` e sem método de coleta (nada foi testado
-  nesta fase). `url_provenance` indica a origem de cada URL. Ministérios estão em
-  cadastro **pendente** (endereço específico não verificado). As cinco fontes
+  nesta fase). `url_provenance` indica a origem de cada URL: 5 fornecidas pelo
+  responsável, 7 observadas nas edições históricas, 10 de conhecimento público
+  (não verificadas operacionalmente) e 3 pendentes de URL (ministérios, em
+  cadastro **pendente**, endereço específico não verificado). As cinco fontes
   florestais obrigatórias (Mais Floresta, Malinovski, Imaflora, Embrapa
   Florestas, Forests News) usam as URLs fornecidas pelo responsável como pontos
   de partida, não como feeds confirmados.
@@ -205,8 +270,17 @@ incoerências entre `mandatory` e `mandatory_themes`. A validação de URL é
   fica para a Fase 1B.
 - Horários locais ambíguos/inexistentes em transições de horário de verão
   (inexistentes hoje em `America/Sao_Paulo`) usam a regra padrão do `zoneinfo`.
-- `diretorio_config_padrao()` pressupõe instalação editável a partir do
-  repositório.
+- Fora do checkout (instalação convencional), a configuração precisa ser
+  fornecida por argumento ou `BRIEFING_CONFIG_DIR`; os YAML não vão no wheel.
+- Reprodutibilidade parcial: `constraints-dev.txt` não tem hashes, não fixa as
+  dependências de build (setuptools/wheel, resolvidas pelo pip em ambiente
+  isolado) e foi validado apenas com Python 3.12.3 em Linux. Tratado na
+  Fase 1A.2 (CI e reprodutibilidade), ainda não implementada.
+- O limite de 600 caracteres do trecho é técnico e provisório; truncamento
+  respeita caracteres e marcas combinantes, mas não clusters de grafemas
+  complexos (ex.: emojis compostos por ZWJ) — em geral inofensivo, porém
+  documentado.
+- Não existe CI: os testes rodam apenas localmente.
 - Proteção contra SSRF não existe porque ainda não há requisições HTTP; é
   **requisito obrigatório da Fase 1B**.
 
@@ -215,7 +289,9 @@ incoerências entre `mandatory` e `mandatory_themes`. A validação de URL é
 | Fase | Escopo | Estado |
 |---|---|---|
 | 0 | Diagnóstico e baseline | concluída |
-| 1A | Fundação técnica e regras temporais | **etapa atual** |
+| 1A | Fundação técnica e regras temporais | em revisão (PR #1) |
+| 1A.1 | Correções de contratos, portabilidade e configuração | **etapa atual** |
+| 1A.2 | CI e reprodutibilidade | proposta, não iniciada |
 | 1B | Coletores RSS e fontes diretas (com proteção SSRF) | não iniciada |
 | 1C | Workflow experimental de coleta | não iniciada |
 | 1D | Avaliação e integração de API de pesquisa | não iniciada |
