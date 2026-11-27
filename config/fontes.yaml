@@ -1,0 +1,583 @@
+# Cadastro de fontes.
+#
+# - Nenhuma fonte esta habilitada para coleta (enabled: false): nenhum acesso
+#   ou metodo de coleta foi verificado na Fase 1A (sem chamadas de rede).
+# - mandatory: true NAO significa acesso confirmado.
+# - rss_url/listing_url nunca sao presumidos; null = desconhecido.
+# - url_provenance registra a origem da homepage_url:
+#     provided_by_owner              -> fornecida pelo responsavel pelo projeto
+#     observed_in_historical_edition -> dominio presente em links das edicoes historicas
+#     public_knowledge_untested      -> endereco publico conhecido, nao testado
+# - ownership_group/upstream_agency/timezone: null ate verificacao.
+versao: 1
+
+fontes:
+  - source_id: reuters
+    name: "Reuters"
+    homepage_url: "https://www.reuters.com/"
+    url_provenance: observed_in_historical_edition
+    registration_status: complete
+    country: "GB"
+    language: en
+    family: news_agency
+    themes: [politica, economia, mercados_financeiros, inteligencia_artificial, mercado_aco, setor_florestal]
+    enabled: false
+    mandatory: false
+    mandatory_themes: []
+    access_status: unverified
+    collection_methods: []
+    rss_url: null
+    listing_url: null
+    timezone: null
+    ownership_group: null
+    upstream_agency: null
+    terms_status: unverified
+    notes: "Agencia internacional. Republicacoes de Reuters em outros veiculos (ex.: UOL) nao sao confirmacao independente."
+
+  - source_id: associated_press
+    name: "Associated Press"
+    homepage_url: "https://apnews.com/"
+    url_provenance: observed_in_historical_edition
+    registration_status: complete
+    country: "US"
+    language: en
+    family: news_agency
+    themes: [politica, economia, mercados_financeiros, inteligencia_artificial]
+    enabled: false
+    mandatory: false
+    mandatory_themes: []
+    access_status: unverified
+    collection_methods: []
+    rss_url: null
+    listing_url: null
+    timezone: null
+    ownership_group: null
+    upstream_agency: null
+    terms_status: unverified
+    notes: "Agencia internacional. Republicacoes de AP nao sao confirmacao independente."
+
+  - source_id: bloomberg
+    name: "Bloomberg"
+    homepage_url: "https://www.bloomberg.com/"
+    url_provenance: public_knowledge_untested
+    registration_status: complete
+    country: "US"
+    language: en
+    family: financial_press
+    themes: [economia, mercados_financeiros, inteligencia_artificial, mercado_aco, setor_florestal]
+    enabled: false
+    mandatory: false
+    mandatory_themes: []
+    access_status: unverified
+    collection_methods: []
+    rss_url: null
+    listing_url: null
+    timezone: null
+    ownership_group: null
+    upstream_agency: null
+    terms_status: unverified
+    notes: "Acesso a materias possivelmente restrito por assinatura (nao verificado)."
+
+  - source_id: financial_times
+    name: "Financial Times"
+    homepage_url: "https://www.ft.com/"
+    url_provenance: public_knowledge_untested
+    registration_status: complete
+    country: "GB"
+    language: en
+    family: financial_press
+    themes: [politica, economia, mercados_financeiros, inteligencia_artificial]
+    enabled: false
+    mandatory: false
+    mandatory_themes: []
+    access_status: unverified
+    collection_methods: []
+    rss_url: null
+    listing_url: null
+    timezone: null
+    ownership_group: null
+    upstream_agency: null
+    terms_status: unverified
+    notes: "Acesso a materias possivelmente restrito por assinatura (nao verificado)."
+
+  - source_id: wall_street_journal
+    name: "Wall Street Journal"
+    homepage_url: "https://www.wsj.com/"
+    url_provenance: observed_in_historical_edition
+    registration_status: complete
+    country: "US"
+    language: en
+    family: financial_press
+    themes: [politica, economia, mercados_financeiros, inteligencia_artificial]
+    enabled: false
+    mandatory: false
+    mandatory_themes: []
+    access_status: unverified
+    collection_methods: []
+    rss_url: null
+    listing_url: null
+    timezone: null
+    ownership_group: null
+    upstream_agency: null
+    terms_status: unverified
+    notes: "Acesso a materias possivelmente restrito por assinatura (nao verificado)."
+
+  - source_id: bbc
+    name: "BBC"
+    homepage_url: "https://www.bbc.com/"
+    url_provenance: public_knowledge_untested
+    registration_status: complete
+    country: "GB"
+    language: en
+    family: general_press
+    themes: [politica, economia, inteligencia_artificial]
+    enabled: false
+    mandatory: false
+    mandatory_themes: []
+    access_status: unverified
+    collection_methods: []
+    rss_url: null
+    listing_url: null
+    timezone: null
+    ownership_group: null
+    upstream_agency: null
+    terms_status: unverified
+    notes: "Edicao em portugues (BBC News Brasil) nao cadastrada separadamente; URL a confirmar se necessaria."
+
+  - source_id: valor_economico
+    name: "Valor Econômico"
+    homepage_url: "https://valor.globo.com/"
+    url_provenance: public_knowledge_untested
+    registration_status: complete
+    country: "BR"
+    language: pt
+    family: financial_press
+    themes: [politica, economia, mercados_financeiros, inteligencia_artificial, mercado_aco, setor_florestal]
+    enabled: false
+    mandatory: false
+    mandatory_themes: []
+    access_status: unverified
+    collection_methods: []
+    rss_url: null
+    listing_url: null
+    timezone: null
+    ownership_group: null
+    upstream_agency: null
+    terms_status: unverified
+    notes: "Grupo economico nao registrado nesta fase (a verificar para auditoria de independencia)."
+
+  - source_id: folha_de_s_paulo
+    name: "Folha de S.Paulo"
+    homepage_url: "https://www1.folha.uol.com.br/"
+    url_provenance: observed_in_historical_edition
+    registration_status: complete
+    country: "BR"
+    language: pt
+    family: general_press
+    themes: [politica, economia, mercados_financeiros, inteligencia_artificial]
+    enabled: false
+    mandatory: false
+    mandatory_themes: []
+    access_status: unverified
+    collection_methods: []
+    rss_url: null
+    listing_url: null
+    timezone: null
+    ownership_group: null
+    upstream_agency: null
+    terms_status: unverified
+    notes: "Dominio observado em links das edicoes historicas."
+
+  - source_id: estadao
+    name: "Estadão"
+    homepage_url: "https://www.estadao.com.br/"
+    url_provenance: public_knowledge_untested
+    registration_status: complete
+    country: "BR"
+    language: pt
+    family: general_press
+    themes: [politica, economia, mercados_financeiros, inteligencia_artificial]
+    enabled: false
+    mandatory: false
+    mandatory_themes: []
+    access_status: unverified
+    collection_methods: []
+    rss_url: null
+    listing_url: null
+    timezone: null
+    ownership_group: null
+    upstream_agency: null
+    terms_status: unverified
+    notes: "Conteudo do Estadao tambem e republicado por terceiros (ex.: 'estadao-conteudo' no UOL)."
+
+  - source_id: o_globo
+    name: "O Globo"
+    homepage_url: "https://oglobo.globo.com/"
+    url_provenance: public_knowledge_untested
+    registration_status: complete
+    country: "BR"
+    language: pt
+    family: general_press
+    themes: [politica, economia, mercados_financeiros, inteligencia_artificial]
+    enabled: false
+    mandatory: false
+    mandatory_themes: []
+    access_status: unverified
+    collection_methods: []
+    rss_url: null
+    listing_url: null
+    timezone: null
+    ownership_group: null
+    upstream_agency: null
+    terms_status: unverified
+    notes: "Grupo economico nao registrado nesta fase (a verificar)."
+
+  - source_id: g1
+    name: "g1"
+    homepage_url: "https://g1.globo.com/"
+    url_provenance: public_knowledge_untested
+    registration_status: complete
+    country: "BR"
+    language: pt
+    family: general_press
+    themes: [politica, economia, mercados_financeiros, inteligencia_artificial]
+    enabled: false
+    mandatory: false
+    mandatory_themes: []
+    access_status: unverified
+    collection_methods: []
+    rss_url: null
+    listing_url: null
+    timezone: null
+    ownership_group: null
+    upstream_agency: null
+    terms_status: unverified
+    notes: "Grupo economico nao registrado nesta fase (a verificar)."
+
+  - source_id: infomoney
+    name: "InfoMoney"
+    homepage_url: "https://www.infomoney.com.br/"
+    url_provenance: observed_in_historical_edition
+    registration_status: complete
+    country: "BR"
+    language: pt
+    family: financial_press
+    themes: [economia, mercados_financeiros, mercado_aco]
+    enabled: false
+    mandatory: false
+    mandatory_themes: []
+    access_status: unverified
+    collection_methods: []
+    rss_url: null
+    listing_url: null
+    timezone: null
+    ownership_group: null
+    upstream_agency: null
+    terms_status: unverified
+    notes: "Dominio observado em links das edicoes historicas."
+
+  - source_id: agencia_brasil
+    name: "Agência Brasil"
+    homepage_url: "https://agenciabrasil.ebc.com.br/"
+    url_provenance: observed_in_historical_edition
+    registration_status: complete
+    country: "BR"
+    language: pt
+    family: news_agency
+    themes: [politica, economia, inteligencia_artificial, setor_florestal]
+    enabled: false
+    mandatory: false
+    mandatory_themes: []
+    access_status: unverified
+    collection_methods: []
+    rss_url: null
+    listing_url: null
+    timezone: null
+    ownership_group: null
+    upstream_agency: null
+    terms_status: unverified
+    notes: "Agencia publica; republicacoes nao sao confirmacao independente."
+
+  - source_id: banco_central
+    name: "Banco Central do Brasil"
+    homepage_url: "https://www.bcb.gov.br/"
+    url_provenance: public_knowledge_untested
+    registration_status: complete
+    country: "BR"
+    language: pt
+    family: government
+    themes: [economia, mercados_financeiros]
+    enabled: false
+    mandatory: false
+    mandatory_themes: []
+    access_status: unverified
+    collection_methods: []
+    rss_url: null
+    listing_url: null
+    timezone: null
+    ownership_group: null
+    upstream_agency: null
+    terms_status: unverified
+    notes: "Fonte oficial. APIs de dados (ex.: PTAX) pertencem a Fase 4."
+
+  - source_id: ibge
+    name: "IBGE"
+    homepage_url: "https://www.ibge.gov.br/"
+    url_provenance: public_knowledge_untested
+    registration_status: complete
+    country: "BR"
+    language: pt
+    family: government
+    themes: [economia]
+    enabled: false
+    mandatory: false
+    mandatory_themes: []
+    access_status: unverified
+    collection_methods: []
+    rss_url: null
+    listing_url: null
+    timezone: null
+    ownership_group: null
+    upstream_agency: null
+    terms_status: unverified
+    notes: "Fonte oficial de estatisticas."
+
+  - source_id: ministerio_fazenda
+    name: "Ministério da Fazenda"
+    homepage_url: null
+    url_provenance: null
+    registration_status: pending
+    country: "BR"
+    language: pt
+    family: government
+    themes: [politica, economia]
+    enabled: false
+    mandatory: false
+    mandatory_themes: []
+    access_status: unverified
+    collection_methods: []
+    rss_url: null
+    listing_url: null
+    timezone: null
+    ownership_group: null
+    upstream_agency: null
+    terms_status: unverified
+    notes: "Cadastro pendente: endereco especifico no portal gov.br nao verificado nesta fase."
+
+  - source_id: ministerio_mdic
+    name: "Ministério do Desenvolvimento, Indústria, Comércio e Serviços"
+    homepage_url: null
+    url_provenance: null
+    registration_status: pending
+    country: "BR"
+    language: pt
+    family: government
+    themes: [economia, mercado_aco]
+    enabled: false
+    mandatory: false
+    mandatory_themes: []
+    access_status: unverified
+    collection_methods: []
+    rss_url: null
+    listing_url: null
+    timezone: null
+    ownership_group: null
+    upstream_agency: null
+    terms_status: unverified
+    notes: "Cadastro pendente: endereco especifico no portal gov.br nao verificado nesta fase."
+
+  - source_id: ministerio_mma
+    name: "Ministério do Meio Ambiente e Mudança do Clima"
+    homepage_url: null
+    url_provenance: null
+    registration_status: pending
+    country: "BR"
+    language: pt
+    family: government
+    themes: [politica, setor_florestal]
+    enabled: false
+    mandatory: false
+    mandatory_themes: []
+    access_status: unverified
+    collection_methods: []
+    rss_url: null
+    listing_url: null
+    timezone: null
+    ownership_group: null
+    upstream_agency: null
+    terms_status: unverified
+    notes: "Cadastro pendente: endereco especifico no portal gov.br nao verificado nesta fase."
+
+  - source_id: instituto_aco_brasil
+    name: "Instituto Aço Brasil"
+    homepage_url: "https://www.acobrasil.org.br/"
+    url_provenance: public_knowledge_untested
+    registration_status: complete
+    country: "BR"
+    language: pt
+    family: industry_association
+    themes: [mercado_aco]
+    enabled: false
+    mandatory: false
+    mandatory_themes: []
+    access_status: unverified
+    collection_methods: []
+    rss_url: null
+    listing_url: null
+    timezone: null
+    ownership_group: null
+    upstream_agency: null
+    terms_status: unverified
+    notes: "Associacao setorial; dados podem ser fonte primaria republicada por outros veiculos."
+
+  - source_id: iba
+    name: "Indústria Brasileira de Árvores (IBÁ)"
+    homepage_url: "https://iba.org/"
+    url_provenance: observed_in_historical_edition
+    registration_status: complete
+    country: "BR"
+    language: pt
+    family: industry_association
+    themes: [setor_florestal, inovacoes_florestais]
+    enabled: false
+    mandatory: false
+    mandatory_themes: []
+    access_status: unverified
+    collection_methods: []
+    rss_url: null
+    listing_url: null
+    timezone: null
+    ownership_group: null
+    upstream_agency: null
+    terms_status: unverified
+    notes: "Associacao setorial; comunicados replicados por terceiros nao sao confirmacao independente."
+
+  # ---- Fontes florestais obrigatorias (URLs fornecidas pelo responsavel) ----
+  - source_id: mais_floresta
+    name: "Mais Floresta"
+    homepage_url: "https://maisfloresta.com.br/"
+    url_provenance: provided_by_owner
+    registration_status: complete
+    country: "BR"
+    language: pt
+    family: specialized_press
+    themes: [inovacoes_florestais, setor_florestal]
+    enabled: false
+    mandatory: true
+    mandatory_themes: [inovacoes_florestais, setor_florestal]
+    access_status: unverified
+    collection_methods: []
+    rss_url: null
+    listing_url: null
+    timezone: null
+    ownership_group: null
+    upstream_agency: null
+    terms_status: unverified
+    notes: "Pagina inicial fornecida pelo responsavel; pagina de listagem e feed nao verificados. Fase 0 registrou paginas parcialmente indisponiveis."
+
+  - source_id: malinovski
+    name: "Malinovski"
+    homepage_url: "https://malinovski.com.br/noticias/"
+    url_provenance: provided_by_owner
+    registration_status: complete
+    country: "BR"
+    language: pt
+    family: specialized_press
+    themes: [inovacoes_florestais, setor_florestal]
+    enabled: false
+    mandatory: true
+    mandatory_themes: [inovacoes_florestais, setor_florestal]
+    access_status: unverified
+    collection_methods: []
+    rss_url: null
+    listing_url: "https://malinovski.com.br/noticias/"
+    timezone: null
+    ownership_group: null
+    upstream_agency: null
+    terms_status: unverified
+    notes: "URL de noticias fornecida pelo responsavel; metodo de coleta nao verificado."
+
+  - source_id: imaflora
+    name: "Imaflora"
+    homepage_url: "https://imaflora.org/noticias"
+    url_provenance: provided_by_owner
+    registration_status: complete
+    country: "BR"
+    language: pt
+    family: civil_society
+    themes: [inovacoes_florestais, setor_florestal]
+    enabled: false
+    mandatory: true
+    mandatory_themes: [inovacoes_florestais, setor_florestal]
+    access_status: unverified
+    collection_methods: []
+    rss_url: null
+    listing_url: "https://imaflora.org/noticias"
+    timezone: null
+    ownership_group: null
+    upstream_agency: null
+    terms_status: unverified
+    notes: "URL fornecida pelo responsavel; Fase 0 registrou listagem nao renderizada (possivel dependencia de JavaScript)."
+
+  - source_id: embrapa_florestas
+    name: "Embrapa Florestas"
+    homepage_url: "https://www.embrapa.br/web/florestas/noticias"
+    url_provenance: provided_by_owner
+    registration_status: complete
+    country: "BR"
+    language: pt
+    family: scientific_institution
+    themes: [inovacoes_florestais, setor_florestal]
+    enabled: false
+    mandatory: true
+    mandatory_themes: [inovacoes_florestais, setor_florestal]
+    access_status: unverified
+    collection_methods: []
+    rss_url: null
+    listing_url: "https://www.embrapa.br/web/florestas/noticias"
+    timezone: null
+    ownership_group: null
+    upstream_agency: null
+    terms_status: unverified
+    notes: "URL fornecida pelo responsavel; Fase 0 registrou tempo limite de acesso."
+
+  - source_id: forests_news
+    name: "Forests News"
+    homepage_url: "https://www.forestsnews.org/pt-br"
+    url_provenance: provided_by_owner
+    registration_status: complete
+    country: null
+    language: pt
+    family: scientific_institution
+    themes: [inovacoes_florestais, setor_florestal]
+    enabled: false
+    mandatory: true
+    mandatory_themes: [inovacoes_florestais, setor_florestal]
+    access_status: unverified
+    collection_methods: []
+    rss_url: null
+    listing_url: "https://www.forestsnews.org/pt-br"
+    timezone: null
+    ownership_group: null
+    upstream_agency: null
+    terms_status: unverified
+    notes: "URL fornecida pelo responsavel (edicao em portugues). Pais de origem nao registrado. Fase 0 registrou copia antiga sem cobertura atual verificavel."
+
+# Categorias complementares previstas (sem fontes concretas nesta fase).
+categorias_complementares_previstas:
+  - categoria: instituicoes_cientificas
+    family: scientific_institution
+    status: pendente_definicao
+    descricao: "Universidades e institutos de pesquisa florestal e siderurgica."
+  - categoria: imprensa_tecnica
+    family: specialized_press
+    status: pendente_definicao
+    descricao: "Imprensa tecnica especializada reconhecida (florestal e siderurgica)."
+  - categoria: comunicados_empresas
+    family: corporate_primary
+    status: pendente_definicao
+    descricao: "Comunicados oficiais e relacoes com investidores de empresas dos setores."
+  - categoria: orgaos_reguladores
+    family: government
+    status: pendente_definicao
+    descricao: "Orgaos reguladores e agencias governamentais pertinentes."

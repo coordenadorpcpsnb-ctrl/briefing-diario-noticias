@@ -1,0 +1,4 @@
+# Dependencias de build do projeto (ver [build-system] em pyproject.toml).
+# Versoes exatas e hashes ficam em build.lock.
+setuptools>=69
+wheel

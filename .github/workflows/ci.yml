@@ -1,0 +1,178 @@
+# CI -- Qualidade, portabilidade e integridade (Fase 1A.2)
+#
+# Somente verificacao: sem coleta de noticias, sem deploy, sem agendamento,
+# sem secrets. Actions externas fixadas por SHA completo de commit, verificado
+# no repositorio oficial (git ls-remote / git fetch) em 27/11/2026.
+name: CI — Qualidade, portabilidade e integridade
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+defaults:
+  run:
+    shell: bash
+
+env:
+  PIP_DISABLE_PIP_VERSION_CHECK: "1"
+  PYTHONUTF8: "1"
+
+jobs:
+  qualidade:
+    name: A — Qualidade e regressão (ubuntu-24.04, Python 3.12)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Checkout (sem persistir credenciais)
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Python 3.12
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements/*.lock
+
+      - name: Ambiente — versões
+        run: |
+          python --version
+          python -m pip --version
+          echo "SHA testado: $GITHUB_SHA ($GITHUB_REF)"
+
+      - name: Instalação reproduzível (locks com hashes) + projeto editável
+        run: |
+          python -m venv .venv-ci
+          .venv-ci/bin/python -m pip install --require-hashes --no-deps -r requirements/dev.lock -r requirements/build.lock
+          .venv-ci/bin/python -m pip install --no-deps --no-build-isolation -e .
+          .venv-ci/bin/python -m pip check
+          .venv-ci/bin/python -m pip freeze --all
+
+      - name: Suíte completa (pytest)
+        run: .venv-ci/bin/python -m pytest -p no:cacheprovider -ra
+
+      - name: YAML, contratos, regras temporais e continuidade semanal
+        run: .venv-ci/bin/python ferramentas/verificacao_ci.py configuracao
+
+  portabilidade:
+    name: B — Portabilidade e instalação (${{ matrix.os }}, Python 3.12)
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, windows-2025]
+    steps:
+      - name: Checkout (sem persistir credenciais)
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Python 3.12
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements/*.lock
+
+      - name: Caminhos por plataforma
+        run: |
+          # Executavel do Python dentro de um venv (relativo a raiz do venv).
+          if [ "$RUNNER_OS" = "Windows" ]; then echo "VPY=Scripts/python.exe" >> "$GITHUB_ENV"; else echo "VPY=bin/python" >> "$GITHUB_ENV"; fi
+          python --version
+          python -m pip --version
+
+      - name: Build controlado do wheel (dependências de build com hashes, sem isolamento)
+        run: |
+          python -m venv "$RUNNER_TEMP/build"
+          B="$RUNNER_TEMP/build/$VPY"
+          "$B" -m pip install --require-hashes --no-deps -r requirements/build.lock
+          "$B" -m pip check
+          "$B" -m pip wheel --no-deps --no-build-isolation -w "$RUNNER_TEMP/dist" .
+          ls -l "$RUNNER_TEMP/dist"
+
+      - name: Instalação convencional do wheel em ambiente limpo
+        run: |
+          python -m venv "$RUNNER_TEMP/inst"
+          P="$RUNNER_TEMP/inst/$VPY"
+          "$P" -m pip install --require-hashes --no-deps -r requirements/dev.lock
+          "$P" -m pip install --no-deps --no-index "$RUNNER_TEMP"/dist/*.whl
+          "$P" -m pip check
+          "$P" -m pip freeze --all
+
+      - name: Preparar configuração externa e diretório de trabalho fora do checkout
+        run: |
+          python -c "import os, shutil; t = os.environ['RUNNER_TEMP']; shutil.copytree('config', os.path.join(t, 'config-externa')); os.makedirs(os.path.join(t, 'trabalho'))"
+
+      - name: Configuração externa, janelas, erro sem configuração e fallback tzdata (fora do checkout)
+        working-directory: ${{ runner.temp }}/trabalho
+        run: |
+          BRIEFING_CONFIG_DIR="$RUNNER_TEMP/config-externa" \
+            "$RUNNER_TEMP/inst/$VPY" "$GITHUB_WORKSPACE/ferramentas/verificacao_ci.py" instalacao --checkout "$GITHUB_WORKSPACE"
+
+      - name: Testes de portabilidade com o pacote instalado
+        working-directory: ${{ runner.temp }}/trabalho
+        run: |
+          "$RUNNER_TEMP/inst/$VPY" -c "import briefing; print('briefing importado de', briefing.__file__)"
+          "$RUNNER_TEMP/inst/$VPY" -m pytest -p no:cacheprovider -ra "$GITHUB_WORKSPACE/tests/test_portabilidade.py"
+
+      - name: Suíte completa nesta plataforma (projeto editável)
+        run: |
+          python -m venv "$RUNNER_TEMP/dev"
+          D="$RUNNER_TEMP/dev/$VPY"
+          "$D" -m pip install --require-hashes --no-deps -r requirements/dev.lock -r requirements/build.lock
+          "$D" -m pip install --no-deps --no-build-isolation -e .
+          "$D" -m pip check
+          "$D" -m pytest -p no:cacheprovider -ra
+
+  integridade:
+    name: C — Integridade e segurança (ubuntu-24.04, Python 3.12)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Checkout com histórico (sem persistir credenciais)
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+
+      - name: Python 3.12
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements/*.lock
+
+      - name: Dependências verificadas por hash
+        run: |
+          python -m venv .venv-ci
+          .venv-ci/bin/python -m pip install --require-hashes --no-deps -r requirements/dev.lock -r requirements/build.lock
+          .venv-ci/bin/python -m pip install --no-deps --no-build-isolation -e .
+          .venv-ci/bin/python -m pip check
+
+      - name: Integridade de docs/ contra a baseline 9d2f2d9 (hashes SHA-256 completos)
+        run: .venv-ci/bin/python ferramentas/verificar_docs_baseline.py
+
+      - name: Segurança estrutural do workflow, locks e higiene do repositório
+        run: .venv-ci/bin/python -m pytest -p no:cacheprovider -ra tests/test_workflow_ci.py tests/test_dependencias.py tests/test_higiene_repositorio.py
+
+      - name: git diff --check (alterações em relação à base)
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: |
+          if [ -z "${BASE_SHA:-}" ] || [ "$BASE_SHA" = "0000000000000000000000000000000000000000" ]; then
+            BASE_SHA=9d2f2d9be264f53856e4501a3d64aec0d5cd2407
+          fi
+          echo "Base: $BASE_SHA  HEAD: $(git rev-parse HEAD)"
+          git diff --check "$BASE_SHA" HEAD
